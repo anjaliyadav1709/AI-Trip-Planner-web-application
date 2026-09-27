@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI Trip Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --ink:#0F1B2B; --paper:#F6F3EC; --deep:#0E2233; --deep2:#163247;
+  --amber:#E2A542; --sage:#7C9885; --line:#243B4E;
+  --violet:#8B6CF0; --rose:#E0577A; --teal:#2FA39A; --blue:#4C86D6; --orange:#E2793F; --cyan:#3FB8C9;
+}
+#view-about{--accent:var(--amber)}
+#view-planner{--accent:var(--violet)}
+#view-method{--accent:var(--blue)}
+#view-results{--accent:var(--teal)}
+#view-trips{--accent:var(--rose)}
+#view-contact{--accent:var(--orange)}
+.accent-h{color:var(--accent)!important}
+.accent-btn{background:var(--accent)!important;border-color:var(--accent)!important;color:#0d0a1a!important}
+.accent-ring:focus{outline:2px solid var(--accent)!important}
+.section-tag{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--accent)}
+input.invalid,select.invalid{border-color:var(--rose)!important;box-shadow:0 0 0 2px rgba(224,87,122,.15)}
+.field-err{color:var(--rose);font-size:.72rem;margin-top:.25rem;display:none}
+.field-err.show{display:block}
+.pw-wrap{position:relative}
+.pw-toggle{position:absolute;right:.6rem;top:50%;transform:translateY(-50%);cursor:pointer;font-size:.85rem;opacity:.6;background:none;border:none;padding:0}
+.pw-toggle:hover{opacity:1}
+.nav-tile{border-radius:14px;padding:1rem;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease;color:#fff}
+.nav-tile:hover{transform:translateY(-3px);box-shadow:0 10px 26px -10px rgba(0,0,0,.4)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--paper:#0E1620;--ink:#EDEAE1;}}
+:root[data-theme="dark"]{--paper:#0E1620;--ink:#EDEAE1;}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--paper);color:var(--ink);font-family:Inter,system-ui,sans-serif;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+.serif{font-family:Fraunces,serif}
+.card{background:rgba(127,127,127,.05);border:1px solid rgba(127,127,127,.18);border-radius:14px}
+.btn{border-radius:10px;font-weight:600;transition:transform .12s ease}
+.btn:active{transform:scale(.97)}
+.chip{border:1px solid rgba(127,127,127,.3);border-radius:999px;padding:.35rem .85rem;font-size:.82rem;cursor:pointer;user-select:none}
+.chip.on{background:var(--amber);border-color:var(--amber);color:#1a1204;font-weight:600}
+input,select{background:transparent;border:1px solid rgba(127,127,127,.35);border-radius:10px;padding:.55rem .7rem;width:100%}
+input:focus,select:focus{outline:2px solid var(--accent,var(--amber))}
+::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:rgba(127,127,127,.4);border-radius:8px}
+.hide{display:none!important}
+.bar{height:10px;border-radius:6px;background:rgba(127,127,127,.15);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--amber)}
+input[type=range]{accent-color:var(--amber)}
+.view{transition:opacity .32s ease, transform .32s ease}
+.view-enter{opacity:0;transform:translateY(10px)}
+.tile{width:64px;height:64px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
+.act-card{border-radius:12px;transition:transform .18s ease, box-shadow .18s ease;cursor:pointer}
+.act-card:hover{transform:translateY(-2px);box-shadow:0 8px 22px -10px rgba(0,0,0,.35)}
+.stagger{opacity:0;animation:rise .5s ease forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+.maplink{font-size:.72rem;text-decoration:underline;text-underline-offset:2px;opacity:.75}
+.maplink:hover{opacity:1}
+.amenity{font-size:.68rem;padding:.15rem .5rem;border-radius:999px;background:rgba(127,127,127,.15)}
+@keyframes bgshift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.authbg{background:linear-gradient(120deg,#16283b,#0e2233,#1c3a52,#0e2233);background-size:300% 300%;animation:bgshift 14s ease infinite}
+.nav-btn{transition:background .15s ease}
+.modal-overlay{position:fixed;inset:0;background:rgba(5,10,16,.55);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;z-index:50;opacity:0;pointer-events:none;transition:opacity .22s ease}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+@media(min-width:640px){.modal-overlay{align-items:center}}
+.modal-panel{background:var(--paper);color:var(--ink);width:100%;max-width:520px;border-radius:18px 18px 0 0;max-height:88vh;overflow-y:auto;transform:translateY(24px);transition:transform .25s ease;padding:1.4rem}
+@media(min-width:640px){.modal-panel{border-radius:18px}}
+.modal-overlay.open .modal-panel{transform:translateY(0)}
+.gen-step{transition:opacity .2s ease}
+.gen-step .circle{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;background:rgba(127,127,127,.15);transition:all .25s ease;flex-shrink:0}
+.gen-step.active .circle{background:var(--amber);color:#1a1204;box-shadow:0 0 0 5px rgba(226,165,66,.25)}
+.gen-step.done .circle{background:#1f6b3a;color:#fff}
+.gen-step.pending{opacity:.55}
+#toast-wrap{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);right:14px;z-index:80;display:flex;flex-direction:column;gap:8px;max-width:320px}
+.toast{padding:.7rem 1rem;border-radius:10px;font-size:.85rem;box-shadow:0 8px 24px -8px rgba(0,0,0,.4);
+ animation:toastin .3s ease, toastout .3s ease 3.4s forwards;color:#fff}
+@keyframes toastin{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+@keyframes toastout{to{opacity:0;transform:translateX(30px)}}
+.alert-banner{border-radius:12px;padding:.8rem 1rem}
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ===== AUTH ===== -->
+<div id="screen-auth" class="authbg min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
+  <div style="position:absolute;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,var(--violet),transparent 70%);opacity:.35;top:-80px;left:-80px;filter:blur(10px)"></div>
+  <div style="position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,var(--teal),transparent 70%);opacity:.3;bottom:-60px;right:-60px;filter:blur(10px)"></div>
+  <div style="position:absolute;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,var(--rose),transparent 70%);opacity:.25;bottom:20%;left:10%;filter:blur(10px)"></div>
+  <div class="w-full max-w-sm relative">
+    <div class="text-center mb-8">
+      <div class="text-4xl mb-2">🧭</div>
+      <h1 class="serif text-3xl text-amber-100" style="color:var(--amber)">AI Trip Planner</h1>
+      <p class="text-sm text-white/60 mt-1">AI-planned trips, budget-checked before you book.</p>
+    </div>
+    <div class="card p-6" style="background:#0f2233cc;border-color:#2c4a63;box-shadow:0 20px 50px -20px rgba(0,0,0,.5)">
+      <div class="flex mb-5 gap-2 text-sm relative">
+        <button onclick="authMode('login')" id="tab-login" class="flex-1 py-2 rounded-lg font-semibold" style="background:var(--amber);color:#1a1204">Sign in</button>
+        <button onclick="authMode('reg')" id="tab-reg" class="flex-1 py-2 rounded-lg font-semibold text-white/70">Create account</button>
+      </div>
+      <div id="auth-error" class="hide text-sm mb-3 px-3 py-2 rounded-lg" style="background:#4a1f1f;color:#ffb4b4"></div>
+      <div id="reg-name-wrap" class="hide mb-3">
+        <label class="text-xs text-white/60">Full name</label>
+        <input id="reg-name" class="text-white" placeholder="Anjali Yadav" oninput="clearFieldErr('reg-name')">
+        <div class="field-err" id="err-reg-name">Enter your full name.</div>
+      </div>
+      <div class="mb-3">
+        <label class="text-xs text-white/60">Email</label>
+        <input id="auth-email" class="text-white" placeholder="you@example.com" oninput="clearFieldErr('auth-email')">
+        <div class="field-err" id="err-auth-email">Enter a valid email address (e.g. you@example.com).</div>
+      </div>
+      <div class="mb-4">
+        <label class="text-xs text-white/60">Password</label>
+        <div class="pw-wrap">
+          <input id="auth-pass" type="password" class="text-white" placeholder="••••••••" oninput="clearFieldErr('auth-pass')" style="padding-right:2.6rem">
+          <button type="button" class="pw-toggle text-white" onclick="togglePw()" id="pw-eye">👁</button>
+        </div>
+        <div class="field-err" id="err-auth-pass">Password must be at least 8 characters.</div>
+      </div>
+      <button onclick="doAuth()" id="auth-submit" class="btn w-full py-3" style="background:var(--amber);color:#1a1204">Sign in</button>
+      <p class="text-xs text-white/40 mt-4 text-center">Demo auth — stored only in this browser, not a real server.</p>
+    </div>
+  </div>
+</div>
+
+<div id="toast-wrap"></div>
+
+<!-- ===== APP ===== -->
+<div id="screen-app" class="hide min-h-screen">
+  <header class="flex items-center justify-between px-5 py-4 border-b" style="border-color:rgba(127,127,127,.2)">
+    <div class="flex items-center gap-2">
+      <button id="back-btn" onclick="goBack()" class="chip hide" title="Go back" style="padding:.35rem .7rem">← Back</button>
+      <span class="text-2xl">🧭</span><span class="serif text-xl" style="color:var(--amber)">AI Trip Planner</span>
+    </div>
+    <nav class="flex gap-1 text-sm flex-wrap">
+      <button onclick="showView('about')" class="nav-btn px-3 py-1.5 rounded-lg">About</button>
+      <button onclick="showView('planner')" class="nav-btn px-3 py-1.5 rounded-lg">Plan a trip</button>
+      <button onclick="showView('method')" class="nav-btn px-3 py-1.5 rounded-lg">Methodology</button>
+      <button onclick="showView('trips')" class="nav-btn px-3 py-1.5 rounded-lg">My trips</button>
+      <button onclick="showView('contact')" class="nav-btn px-3 py-1.5 rounded-lg">Contact</button>
+    </nav>
+    <div class="flex items-center gap-3 text-sm">
+      <span id="backend-badge" class="text-xs opacity-60"></span>
+      <button onclick="openHow()" class="chip" title="How it works">ℹ️ How it works</button>
+      <span id="who" class="text-white/60 hidden sm:inline"></span>
+      <button onclick="logout()" class="chip">Log out</button>
+    </div>
+  </header>
+
+  <!-- ABOUT -->
+  <section id="view-about" class="max-w-3xl mx-auto px-5 py-10">
+    <div class="text-center mb-10 stagger">
+      <div class="text-5xl mb-3">🧭</div>
+      <h2 class="serif text-3xl mb-2 accent-h">AI Trip Planner</h2>
+      <p class="opacity-70 max-w-lg mx-auto">Turns a destination, a budget and a few preferences into a day-wise
+      itinerary — then checks its own numbers before it hands the plan to you.</p>
+      <button onclick="showView('planner')" class="btn accent-btn mt-6 px-6 py-3">Start planning →</button>
+    </div>
+    <p class="text-center text-xs opacity-50 mb-3">Jump straight to any section:</p>
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div class="nav-tile stagger" style="animation-delay:80ms;background:linear-gradient(135deg,var(--violet),#5d3fc9)" onclick="showView('planner')">
+        <div class="text-2xl mb-2">🧮</div><h3 class="font-semibold text-sm mb-1">Plan a trip</h3><p class="text-xs opacity-80">Budget, duration and max travel time are hard limits, not suggestions.</p></div>
+      <div class="nav-tile stagger" style="animation-delay:140ms;background:linear-gradient(135deg,var(--blue),#2c5aa0)" onclick="showView('method')">
+        <div class="text-2xl mb-2">🧭</div><h3 class="font-semibold text-sm mb-1">Methodology</h3><p class="text-xs opacity-80">The 7-step pipeline behind every generated itinerary.</p></div>
+      <div class="nav-tile stagger" style="animation-delay:200ms;background:linear-gradient(135deg,var(--rose),#a83a58)" onclick="showView('trips')">
+        <div class="text-2xl mb-2">💾</div><h3 class="font-semibold text-sm mb-1">My trips</h3><p class="text-xs opacity-80">Reopen anything you've generated and saved before.</p></div>
+      <div class="nav-tile stagger" style="animation-delay:260ms;background:linear-gradient(135deg,var(--orange),#a8502a)" onclick="showView('contact')">
+        <div class="text-2xl mb-2">✉️</div><h3 class="font-semibold text-sm mb-1">Contact</h3><p class="text-xs opacity-80">Questions, feedback, or a bug to report — reach out.</p></div>
+    </div>
+  </section>
+
+  <!-- METHODOLOGY -->
+  <section id="view-method" class="hide max-w-2xl mx-auto px-5 py-10">
+    <h2 class="serif text-2xl mb-6 accent-h">Methodology</h2>
+    <div class="space-y-3">
+      <div class="card p-3 flex gap-3 items-start stagger" style="animation-delay:0ms"><div class="tile" style="width:36px;height:36px;font-size:.9rem;background:linear-gradient(135deg,var(--blue),var(--violet))">1</div><p class="text-sm pt-1.5">Collect — destination, days, budget, travelers and interests.</p></div>
+      <div class="card p-3 flex gap-3 items-start stagger" style="animation-delay:60ms"><div class="tile" style="width:36px;height:36px;font-size:.9rem;background:linear-gradient(135deg,var(--blue),var(--violet))">2</div><p class="text-sm pt-1.5">Validate — check required fields, ranges and input consistency.</p></div>
+      <div class="card p-3 flex gap-3 items-start stagger" style="animation-delay:120ms"><div class="tile" style="width:36px;height:36px;font-size:.9rem;background:linear-gradient(135deg,var(--blue),var(--violet))">3</div><p class="text-sm pt-1.5">Orchestrate — convert the goal into planning tasks and tool calls.</p></div>
+      <div class="card p-3 flex gap-3 items-start stagger" style="animation-delay:180ms"><div class="tile" style="width:36px;height:36px;font-size:.9rem;background:linear-gradient(135deg,var(--blue),var(--violet))">4</div><p class="text-sm pt-1.5">Retrieve — pull place, route and weather signals where available.</p></div>
+      <div class="card p-3 flex gap-3 items-start stagger" style="animation-delay:240ms"><div class="tile" style="width:36px;height:36px;font-size:.9rem;background:linear-gradient(135deg,var(--blue),var(--violet))">5</div><p class="text-sm pt-1.5">Generate — produce a structured candidate itinerary.</p></div>
+      <div class="card p-3 flex gap-3 items-start stagger" style="animation-delay:300ms"><div class="tile" style="width:36px;height:36px;font-size:.9rem;background:linear-gradient(135deg,var(--blue),var(--violet))">6</div><p class="text-sm pt-1.5">Verify — independently check cost, duration and travel constraints.</p></div>
+      <div class="card p-3 flex gap-3 items-start stagger" style="animation-delay:360ms"><div class="tile" style="width:36px;height:36px;font-size:.9rem;background:linear-gradient(135deg,var(--blue),var(--violet))">7</div><p class="text-sm pt-1.5">Re-plan — replace or reorder activities when a constraint fails, then re-check.</p></div>
+    </div>
+  </section>
+
+  <!-- PLANNER -->
+  <section id="view-planner" class="hide max-w-3xl mx-auto px-5 py-8">
+    <h2 class="serif text-2xl mb-1 accent-h">Where to, and on what terms?</h2>
+    <p class="text-sm opacity-70 mb-6">Give the constraints. The planner won't cross them.</p>
+    <div class="card p-5 space-y-4" style="border-color:rgba(139,108,240,.3)">
+      <div class="relative">
+        <label class="text-xs opacity-60">Destination</label>
+        <input id="f-dest" placeholder="Start typing — Goa, Manali, Paris…" autocomplete="off" oninput="filterDest(this.value);clearFieldErr('f-dest')" onfocus="filterDest(this.value)" onblur="setTimeout(validateDestField,150)">
+        <div id="dest-drop" class="hide card" style="position:absolute;z-index:10;width:100%;max-height:180px;overflow-y:auto;background:var(--paper)"></div>
+        <div class="field-err" id="err-f-dest">Enter a destination — pick one from the list or type your own.</div>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <div><label class="text-xs opacity-60">Days</label><input id="f-days" type="number" min="1" max="10" placeholder="e.g. 4" oninput="clearFieldErr('f-days')"><div class="field-err" id="err-f-days">Enter a number of days between 1 and 10.</div></div>
+        <div><label class="text-xs opacity-60">Total budget (₹)</label><input id="f-budget" type="number" step="500" placeholder="e.g. 30000" oninput="clearFieldErr('f-budget')"><div class="field-err" id="err-f-budget">Enter a budget of at least ₹1,000.</div></div>
+        <div><label class="text-xs opacity-60">Max travel/day (hrs)</label><input id="f-travel" type="number" min="1" max="12" placeholder="e.g. 4" oninput="clearFieldErr('f-travel')"><div class="field-err" id="err-f-travel">Enter between 1 and 12 hours.</div></div>
+      </div>
+      <div class="card p-3" style="background:rgba(139,108,240,.07)">
+        <label class="text-xs opacity-60 block mb-2">Who's traveling?</label>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div><label class="text-xs opacity-50">Men</label><input id="p-men" type="number" min="0" value="1" oninput="sumTravelers();clearFieldErr('p-men')"></div>
+          <div><label class="text-xs opacity-50">Women</label><input id="p-women" type="number" min="0" value="1" oninput="sumTravelers();clearFieldErr('p-women')"></div>
+          <div><label class="text-xs opacity-50">Senior citizens</label><input id="p-sr" type="number" min="0" value="0" oninput="sumTravelers();clearFieldErr('p-sr')"></div>
+          <div><label class="text-xs opacity-50">Children</label><input id="p-child" type="number" min="0" value="0" oninput="sumTravelers();clearFieldErr('p-child')"></div>
+        </div>
+        <div class="field-err" id="err-p-men">Add at least one traveler across these fields.</div>
+        <div class="text-xs opacity-70 mt-2">Total travelers: <b id="p-total">2</b></div>
+      </div>
+      <div>
+        <label class="text-xs opacity-60 block mb-2">Interests</label>
+        <div class="flex flex-wrap gap-2" id="interest-chips"></div>
+      </div>
+      <button onclick="generateTrip()" class="btn accent-btn w-full py-3 mt-2">✨ Generate itinerary</button>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="view-results" class="hide max-w-5xl mx-auto px-5 py-8">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
+      <h2 class="serif text-2xl" id="res-title">Your trip</h2>
+      <div class="flex gap-2 flex-wrap">
+        <button onclick="generateTrip(true)" class="chip">↻ Regenerate</button>
+        <button onclick="downloadPDF()" class="chip">⬇ Download PDF</button>
+        <button onclick="emailTrip()" class="chip">✉ Email itinerary</button>
+        <button onclick="saveTrip()" class="chip" style="background:var(--sage);color:#08170f;border-color:var(--sage)">💾 Save trip</button>
+      </div>
+    </div>
+    <div class="flex gap-2 flex-wrap mb-3" id="res-pills"></div>
+    <div id="data-note" class="text-xs px-3 py-2 rounded-lg mb-7"></div>
+
+    <!-- hotels -->
+    <h3 class="font-semibold text-sm mb-3 accent-h">🏨 Hotel Recommendations</h3>
+    <div class="grid sm:grid-cols-3 gap-4 mb-8" id="hotel-list"></div>
+
+    <!-- getting around -->
+    <div class="card p-4 mb-8" style="border-color:rgba(63,184,201,.4)">
+      <h3 class="font-semibold text-sm mb-1" style="color:var(--cyan)">🧭 Need help getting around <span id="ga-dest"></span>?</h3>
+      <p class="text-xs opacity-60 mb-3">Pick how you'd like to travel within the city — we'll point you to real options nearby.</p>
+      <div class="flex flex-wrap gap-2 mb-3" id="ga-modes"></div>
+      <div id="ga-result" class="hide text-sm mb-3"></div>
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-xs opacity-60">Your recent searches</span>
+        <button onclick="clearTransportHistory()" class="text-xs opacity-50 hover:opacity-100">clear</button>
+      </div>
+      <div id="ga-history" class="space-y-1.5"></div>
+    </div>
+
+    <!-- weather -->
+    <div class="card p-4 mb-8" style="border-color:rgba(47,163,154,.35)">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-sm accent-h">Weather outlook</h3>
+        <button onclick="refreshWeather()" class="text-xs opacity-60 hover:opacity-100">↻ <span id="wx-time">updated now</span></button>
+      </div>
+      <div id="wx-strip" class="grid gap-2" style="grid-template-columns:repeat(auto-fit,minmax(85px,1fr))"></div>
+      <div id="wx-alert" class="hide alert-banner mt-3 text-sm"></div>
+    </div>
+
+    <!-- itinerary -->
+    <h3 class="font-semibold text-sm mb-3 accent-h">📍 Places to Visit</h3>
+    <div class="space-y-7 mb-8" id="itinerary-days"></div>
+
+    <!-- budget -->
+    <div class="card p-4" style="border-color:rgba(47,163,154,.35)">
+      <h3 class="font-semibold text-sm mb-3 accent-h">Budget — live calculation</h3>
+      <div class="grid sm:grid-cols-2 gap-x-8 gap-y-3" id="budget-rows"></div>
+      <div class="flex justify-between items-center mt-4 pt-3 border-t text-sm" style="border-color:rgba(127,127,127,.2)">
+        <span class="opacity-70">Estimated total</span>
+        <span class="font-semibold text-lg" id="budget-total">₹0</span>
+      </div>
+      <div id="budget-flag" class="text-xs mt-2 px-2 py-1.5 rounded-lg"></div>
+    </div>
+  </section>
+
+  <!-- TRIPS -->
+  <section id="view-trips" class="hide max-w-3xl mx-auto px-5 py-8">
+    <h2 class="serif text-2xl mb-4 accent-h">Saved trips</h2>
+    <div id="trips-list" class="space-y-3"></div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="view-contact" class="hide max-w-lg mx-auto px-5 py-8">
+    <h2 class="serif text-2xl mb-1 accent-h">Get in touch</h2>
+    <p class="text-sm opacity-70 mb-6">Questions, feedback, or a bug to report — send a note.</p>
+    <div class="card p-5 space-y-4" style="border-color:rgba(226,121,63,.35)">
+      <div><label class="text-xs opacity-60">Name</label>
+        <input id="c-name" placeholder="Your name" oninput="clearFieldErr('c-name')">
+        <div class="field-err" id="err-c-name">Enter your name.</div></div>
+      <div><label class="text-xs opacity-60">Email</label>
+        <input id="c-email" placeholder="you@example.com" oninput="clearFieldErr('c-email')">
+        <div class="field-err" id="err-c-email">Enter a valid email address.</div></div>
+      <div><label class="text-xs opacity-60">Message</label>
+        <textarea id="c-msg" rows="4" oninput="clearFieldErr('c-msg')" placeholder="What's on your mind?" style="background:transparent;border:1px solid rgba(127,127,127,.35);border-radius:10px;padding:.55rem .7rem;width:100%"></textarea>
+        <div class="field-err" id="err-c-msg">Write a short message before sending.</div></div>
+      <button onclick="sendContact()" class="btn accent-btn w-full py-3">✉️ Send message</button>
+      <p class="text-xs opacity-50 text-center">Opens your mail app addressed to our support inbox — this demo has no server to receive it silently.</p>
+    </div>
+  </section>
+</div>
+
+<!-- ===== PLACE DETAIL MODAL ===== -->
+<div id="detail-overlay" class="modal-overlay" onclick="if(event.target===this)closeDetail()">
+  <div class="modal-panel">
+    <div class="flex justify-between items-start mb-3">
+      <div id="detail-tile" class="tile" style="width:52px;height:52px;font-size:1.3rem"></div>
+      <button onclick="closeDetail()" class="chip" style="padding:.25rem .6rem">Close ✕</button>
+    </div>
+    <div id="detail-body"></div>
+  </div>
+</div>
+
+<!-- ===== HOW IT WORKS MODAL ===== -->
+<div id="how-overlay" class="modal-overlay" onclick="if(event.target===this)closeHow()">
+  <div class="modal-panel">
+    <h3 class="serif text-xl mb-1">How the planner works</h3>
+    <p class="text-xs opacity-60 mb-4">User goal → AI planning → tool-verified data → deterministic checks → save.</p>
+    <div class="space-y-2 mb-4">
+      <div class="card p-3 flex gap-3 items-center"><span class="text-xl">💻</span><span class="text-sm">React UI — collects destination, budget, interests, constraints</span></div>
+      <div class="card p-3 flex gap-3 items-center"><span class="text-xl">🔗</span><span class="text-sm">Node.js + Express REST API — validation &amp; orchestration</span></div>
+      <div class="card p-3 flex gap-3 items-center"><span class="text-xl">✨</span><span class="text-sm">Gemini — itinerary generation</span></div>
+      <div class="card p-3 flex gap-3 items-center"><span class="text-xl">📍</span><span class="text-sm">Places / Routes / Weather APIs</span></div>
+      <div class="card p-3 flex gap-3 items-center"><span class="text-xl">✅</span><span class="text-sm">Deterministic validation &amp; re-planning — budget, duration, travel-time</span></div>
+      <div class="card p-3 flex gap-3 items-center"><span class="text-xl">🔥</span><span class="text-sm">Firebase — authentication &amp; trip history</span></div>
+    </div>
+    <button onclick="closeHow()" class="btn w-full py-2.5" style="background:var(--amber);color:#1a1204">Close</button>
+  </div>
+</div>
+
+<!-- ===== BUILDING YOUR ITINERARY MODAL ===== -->
+<div id="gen-overlay" class="modal-overlay">
+  <div class="modal-panel">
+    <h3 class="serif text-xl mb-1">Building your itinerary</h3>
+    <p class="text-xs opacity-60 mb-5">Following the same pipeline as the proposed system architecture.</p>
+    <div id="gen-steps"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- data pools ---------- */
+const DESTS=["Goa","Manali","Jaipur","Kerala (Munnar)","Rishikesh","Shimla","Udaipur","Paris","Bali","Bangkok","Dubai","Tokyo",
+ "Delhi","Mumbai","Agra","Varanasi","Darjeeling","London","Singapore","Bengaluru","Chennai","Kolkata","Hyderabad","Pune","Lucknow","Kanpur",
+ "Amritsar","Mysuru","Pondicherry","Ladakh","Andaman Islands","Coorg","Ooty","Gangtok","Mount Abu","Jodhpur","Jaisalmer",
+ "Rome","Barcelona","Amsterdam","New York","Los Angeles","Sydney","Kathmandu","Bhutan","Maldives","Phuket","Kuala Lumpur",
+ "Hong Kong","Seoul","Istanbul","Cairo","Cape Town","Rio de Janeiro","Toronto","Vancouver","Zurich","Vienna","Prague"];
+function filterDest(v){
+ const drop=document.getElementById('dest-drop');
+ const m=v.trim()?DESTS.filter(d=>d.toLowerCase().includes(v.trim().toLowerCase())):DESTS;
+ if(!m.length){drop.classList.add('hide');return}
+ drop.innerHTML=m.slice(0,8).map(d=>`<div class="px-3 py-2 text-sm hover:bg-black/10 cursor-pointer" onclick="pickDest('${d}')">${d}</div>`).join('');
+ drop.classList.remove('hide');
+}
+function pickDest(d){document.getElementById('f-dest').value=d;document.getElementById('dest-drop').classList.add('hide');clearFieldErr('f-dest')}
+function isKnownDest(v){return DESTS.some(d=>d.toLowerCase()===v.trim().toLowerCase())}
+// Heuristic sanity check — not a real gazetteer lookup (this page can't call
+// a live geocoding API), just enough to catch obvious keyboard-mash gibberish
+// while still accepting real place names that aren't in the suggestion list.
+const KEYBOARD_MASH=['asdf','qwer','zxcv','jkl','hjkl','wasd','qwerty','asdfgh','zxcvbn'];
+function looksLikePlace(v){
+ const s=v.trim();
+ if(s.length<2||s.length>40)return false;
+ if(!/^[a-zA-Z\s'\-.,()]+$/.test(s))return false; // letters/spaces/basic punctuation only
+ const words=s.split(/[^a-zA-Z]+/).filter(Boolean);
+ if(!words.length)return false;
+ for(const w of words){
+   if(w.length>2&&!/[aeiouAEIOU]/.test(w))return false; // word needs a vowel
+   if(/[^aeiouAEIOU]{4,}/.test(w))return false; // 4+ consonants in a row within one word
+   if(/^(.)\1{2,}$/.test(w))return false; // "aaaa"
+   if(/^(.{1,4})\1{1,}$/.test(w))return false; // "asdasdasd" — whole word is a repeated chunk
+ }
+ const low=s.toLowerCase();
+ if(KEYBOARD_MASH.some(k=>low.includes(k)))return false;
+ return true;
+}
+function validateDestField(){
+ const v=document.getElementById('f-dest').value.trim();
+ const errEl=document.getElementById('err-f-dest');
+ if(!v){errEl.textContent='Enter a destination first.'; markFieldErr('f-dest',true); return false}
+ if(!isKnownDest(v)&&!looksLikePlace(v)){errEl.textContent=`"${v}" doesn't look like a real place name — check the spelling.`; markFieldErr('f-dest',true); return false}
+ markFieldErr('f-dest',false); return true;
+}
+document.addEventListener('click',e=>{if(!e.target.closest('#f-dest')&&!e.target.closest('#dest-drop'))document.getElementById('dest-drop').classList.add('hide')});
+function sumTravelers(){
+ const n=(+document.getElementById('p-men').value||0)+(+document.getElementById('p-women').value||0)+
+   (+document.getElementById('p-sr').value||0)+(+document.getElementById('p-child').value||0);
+ document.getElementById('p-total').textContent=Math.max(1,n);
+ return Math.max(1,n);
+}
+function showToast(msg,type){
+ const t=document.createElement('div'); t.className='toast';
+ t.style.background=type==='error'?'#7a2222':type==='warn'?'#7a5a1f':'#1f6b3a';
+ t.textContent=msg; const wrap=document.getElementById('toast-wrap'); wrap.appendChild(t);
+ setTimeout(()=>t.remove(),3800);
+}
+const INTERESTS=["Nature","Culture & Heritage","Food","Adventure","Relaxation","Shopping","Nightlife"];
+document.getElementById('interest-chips').innerHTML=INTERESTS.map(i=>`<span class="chip" data-i="${i}" onclick="toggleChip(this)">${i}</span>`).join('');
+document.querySelectorAll('.chip[data-i]').forEach((c,idx)=>{if(idx<3)c.classList.add('on')});
+function toggleChip(el){el.classList.toggle('on')}
+
+const ICON={"Nature":"🌿","Culture & Heritage":"🛕","Food":"🍛","Adventure":"🪂","Relaxation":"🧘","Shopping":"🛍️","Nightlife":"🌃"};
+const TILE={"Nature":["#3f6b4f","#7C9885"],"Culture & Heritage":["#7a4e23","#E2A542"],"Food":["#8a3324","#d9703f"],
+ "Adventure":["#1f4a63","#3f8ab0"],"Relaxation":["#4a5a7c","#8a9ecf"],"Shopping":["#6a3f6b","#b06fb0"],"Nightlife":["#1a2340","#3c4a80"]};
+const DESC={"Nature":"A relaxed outdoor stop known for scenic views and fresh air — good for photos and slow mornings.",
+ "Culture & Heritage":"A heritage site reflecting the region's history and architecture, popular with first-time visitors.",
+ "Food":"A local favourite for authentic regional flavours — expect a short queue at peak meal times.",
+ "Adventure":"An active, adrenaline-leaning stop — comfortable shoes and a water bottle are recommended.",
+ "Relaxation":"A calmer stop built for unwinding after a busy travel day.",
+ "Shopping":"A browsing-friendly stretch for local crafts, souvenirs and everyday finds.",
+ "Nightlife":"An evening spot with music and a lively crowd — best enjoyed later in the day."};
+const HOURS={"Nature":"6:00 AM – 6:00 PM","Culture & Heritage":"9:00 AM – 5:30 PM","Food":"11:00 AM – 11:00 PM",
+ "Adventure":"7:00 AM – 4:00 PM","Relaxation":"8:00 AM – 8:00 PM","Shopping":"10:00 AM – 9:00 PM","Nightlife":"7:00 PM – 1:00 AM"};
+const POOL={
+ "Nature":["Walk the {d} shoreline at sunrise","Boat ride through {d}'s backwaters","Guided nature trail near {d}","Sunset viewpoint hike"],
+ "Culture & Heritage":["Heritage walk through old {d}","Visit the main temple/fort complex","Local museum & art quarter tour","Evening cultural performance"],
+ "Food":["Street-food crawl in {d} market","Cooking class — regional cuisine","Rooftop dinner with local specialities","Breakfast at a local institution"],
+ "Adventure":["Water sports session","Trekking / zip-line excursion","Scooter ride to nearby viewpoint","Paragliding / river rafting slot"],
+ "Relaxation":["Spa & wellness morning","Beach/lake lounging afternoon","Slow café hopping","Sunset yoga session"],
+ "Shopping":["Local bazaar for handicrafts","Boutique district browse","Souvenir shopping street","Textile / spice market visit"],
+ "Nightlife":["Live-music bar evening","Night market stroll","Rooftop lounge","Riverside night walk"]
+};
+// Real, named attractions for well-known destinations — hand-curated from
+// established general knowledge, not a live database. Existence/names are
+// accurate; treat opening hours and ticket prices as approximate, since
+// this page can't call a live source to confirm today's exact figures.
+const REAL_PLACES={
+ "goa":[
+  {name:"Baga Beach",cat:"Relaxation",desc:"A lively stretch of sand lined with beach shacks, watersports operators and sunset crowds — one of North Goa's best-known beaches.",ticket:"Free (activities extra)"},
+  {name:"Basilica of Bom Jesus",cat:"Culture & Heritage",desc:"A 16th-century UNESCO World Heritage church in Old Goa, holding the remains of St. Francis Xavier.",ticket:"Free (donations welcome)"},
+  {name:"Fort Aguada",cat:"Culture & Heritage",desc:"A 17th-century Portuguese sea fort and lighthouse overlooking the Arabian Sea at Sinquerim.",ticket:"Free"},
+  {name:"Dudhsagar Falls",cat:"Nature",desc:"A four-tiered waterfall on the Goa–Karnataka border, reached via jeep safari through Bhagwan Mahaveer Sanctuary.",ticket:"₹400–600 jeep safari"},
+  {name:"Anjuna Flea Market",cat:"Shopping",desc:"A Wednesday market famous since the hippie era for clothing, jewellery and handicraft stalls.",ticket:"Free (shopping extra)"},
+  {name:"Tito's Lane, Baga",cat:"Nightlife",desc:"Goa's best-known nightlife strip, packed with clubs and bars that stay lively past midnight.",ticket:"Cover charge may apply"},
+  {name:"Se Cathedral",cat:"Culture & Heritage",desc:"One of Asia's largest churches, built by the Portuguese in Old Goa in the 16th century.",ticket:"Free"}
+ ],
+ "manali":[
+  {name:"Hadimba Temple",cat:"Culture & Heritage",desc:"A distinctive wooden cave temple set among cedar trees, dedicated to Hidimba Devi from the Mahabharata.",ticket:"Free"},
+  {name:"Solang Valley",cat:"Adventure",desc:"A valley known for paragliding, zorbing and cable-car rides, with snow activities in winter.",ticket:"₹300–1,500 depending on activity"},
+  {name:"Old Manali",cat:"Relaxation",desc:"A laid-back riverside quarter of cafés, guesthouses and mountain views, popular with long-stay travelers.",ticket:"Free"},
+  {name:"Vashisht Hot Springs",cat:"Relaxation",desc:"Natural sulphur hot-spring baths beside an old stone temple, a short drive from central Manali.",ticket:"Free / small donation"},
+  {name:"Rohtang Pass",cat:"Nature",desc:"A high mountain pass on the Manali–Leh highway with dramatic snow-capped views (permit required, seasonal).",ticket:"Permit ~₹550"},
+  {name:"Mall Road, Manali",cat:"Shopping",desc:"The town's main pedestrian street for shawls, woollens and local handicrafts.",ticket:"Free (shopping extra)"}
+ ],
+ "jaipur":[
+  {name:"Amber Fort",cat:"Culture & Heritage",desc:"A hilltop Rajput fort-palace of mirrored halls and courtyards overlooking Maota Lake.",ticket:"₹550 (Foreigners), ₹100 (Indians)"},
+  {name:"Hawa Mahal",cat:"Culture & Heritage",desc:"The five-storey 'Palace of Winds' with 953 latticed windows, built for royal women to observe street life.",ticket:"₹200 (Foreigners), ₹50 (Indians)"},
+  {name:"City Palace, Jaipur",cat:"Culture & Heritage",desc:"The former royal residence, still partly home to the erstwhile royal family, with museums and courtyards.",ticket:"₹300–700 (Foreigners), ₹75–200 (Indians)"},
+  {name:"Jantar Mantar, Jaipur",cat:"Culture & Heritage",desc:"An 18th-century astronomical observatory of giant stone instruments, a UNESCO World Heritage Site.",ticket:"₹200 (Foreigners), ₹50 (Indians)"},
+  {name:"Johari Bazaar",cat:"Shopping",desc:"Jaipur's historic jewellery and gemstone market in the old walled city.",ticket:"Free (shopping extra)"},
+  {name:"Chokhi Dhani",cat:"Food",desc:"An ethnic village-style resort offering a Rajasthani thali dinner with folk performances.",ticket:"₹700–1,200 entry + dinner"}
+ ],
+ "delhi":[
+  {name:"Red Fort",cat:"Culture & Heritage",desc:"The Mughal-era sandstone fort where India's Prime Minister raises the flag every Independence Day.",ticket:"₹550 (Foreigners), ₹35 (Indians)"},
+  {name:"India Gate",cat:"Culture & Heritage",desc:"A war memorial arch at the heart of Lutyens' Delhi, popular for evening walks.",ticket:"Free"},
+  {name:"Qutub Minar",cat:"Culture & Heritage",desc:"A 73-metre 12th-century minaret and UNESCO World Heritage Site in Mehrauli.",ticket:"₹600 (Foreigners), ₹40 (Indians)"},
+  {name:"Humayun's Tomb",cat:"Culture & Heritage",desc:"A grand Mughal garden-tomb, precursor in style to the Taj Mahal, and a UNESCO World Heritage Site.",ticket:"₹600 (Foreigners), ₹40 (Indians)"},
+  {name:"Lotus Temple",cat:"Culture & Heritage",desc:"A lotus-shaped Bahá'í House of Worship open to all faiths, known for its architecture.",ticket:"Free"},
+  {name:"Chandni Chowk",cat:"Food",desc:"Old Delhi's historic market lane, dense with street food, spice traders and textile shops.",ticket:"Free (food & shopping extra)"},
+  {name:"Akshardham Temple",cat:"Culture & Heritage",desc:"A large modern Hindu temple complex known for its exhibitions and evening light show.",ticket:"Free entry; exhibitions ₹170–250"}
+ ],
+ "agra":[
+  {name:"Taj Mahal",cat:"Culture & Heritage",desc:"The white-marble mausoleum built by Shah Jahan for Mumtaz Mahal — a UNESCO World Heritage Site and one of the New Seven Wonders.",ticket:"₹1,100 (Foreigners), ₹50 (Indians)"},
+  {name:"Agra Fort",cat:"Culture & Heritage",desc:"A red-sandstone Mughal fort on the Yamuna, residence of emperors before Shah Jahan's confinement here.",ticket:"₹650 (Foreigners), ₹40 (Indians)"},
+  {name:"Fatehpur Sikri",cat:"Culture & Heritage",desc:"Akbar's short-lived capital city, a well-preserved Mughal complex of red sandstone, a day trip from Agra.",ticket:"₹610 (Foreigners), ₹50 (Indians)"},
+  {name:"Mehtab Bagh",cat:"Nature",desc:"A garden across the river from the Taj Mahal, known for sunset views of its unobstructed rear façade.",ticket:"₹300 (Foreigners), ₹25 (Indians)"},
+  {name:"Sadar Bazaar, Agra",cat:"Shopping",desc:"A market area known for marble handicrafts and leather goods.",ticket:"Free (shopping extra)"}
+ ],
+ "udaipur":[
+  {name:"City Palace, Udaipur",cat:"Culture & Heritage",desc:"A lakeside palace complex built over centuries by Mewar rulers, now part-museum.",ticket:"₹300–700 (Foreigners), ₹30–250 (Indians)"},
+  {name:"Lake Pichola",cat:"Relaxation",desc:"The city's central lake, best seen by sunset boat ride past the City Palace and Jag Mandir.",ticket:"₹400–700 boat ride"},
+  {name:"Jag Mandir",cat:"Culture & Heritage",desc:"A palace on an island in Lake Pichola, reachable only by boat.",ticket:"Included in boat ride fare"},
+  {name:"Saheliyon Ki Bari",cat:"Nature",desc:"A garden of fountains, lotus pools and marble kiosks built for royal ladies-in-waiting.",ticket:"₹50"},
+  {name:"Jagdish Temple",cat:"Culture & Heritage",desc:"A large, ornately carved Indo-Aryan temple near the City Palace, dedicated to Vishnu.",ticket:"Free"}
+ ],
+ "kerala (munnar)":[
+  {name:"Munnar Tea Gardens",cat:"Nature",desc:"Rolling hills blanketed in tea plantations, with estate tours explaining how the tea is grown and processed.",ticket:"₹100–200 for estate/museum tours"},
+  {name:"Eravikulam National Park",cat:"Nature",desc:"Home to the endangered Nilgiri tahr, with a shuttle-accessed viewing trail through grassy hills.",ticket:"₹125 (Indians), ₹450 (Foreigners)"},
+  {name:"Mattupetty Dam",cat:"Nature",desc:"A scenic reservoir surrounded by hills, popular for boating and views.",ticket:"₹30 entry; boating extra"},
+  {name:"Top Station",cat:"Nature",desc:"A high viewpoint on the Kerala–Tamil Nadu border overlooking the Western Ghats.",ticket:"Free"},
+  {name:"Kolukkumalai Tea Estate",cat:"Adventure",desc:"One of the world's highest tea plantations, reached by a bumpy jeep ride, known for sunrise views.",ticket:"₹1,500–2,000 jeep trip"}
+ ],
+ "paris":[
+  {name:"Eiffel Tower",cat:"Culture & Heritage",desc:"Gustave Eiffel's 1889 iron tower, Paris's defining landmark, with viewing decks at multiple levels.",ticket:"€18–29 depending on level"},
+  {name:"Louvre Museum",cat:"Culture & Heritage",desc:"The world's most-visited museum, home to the Mona Lisa and Venus de Milo.",ticket:"€22"},
+  {name:"Notre-Dame Cathedral",cat:"Culture & Heritage",desc:"The Gothic cathedral on Île de la Cité, undergoing restoration after the 2019 fire.",ticket:"Free (interior access varies)"},
+  {name:"Montmartre & Sacré-Cœur",cat:"Culture & Heritage",desc:"A hilltop artists' quarter topped by the white-domed basilica, with panoramic city views.",ticket:"Free (basilica); funicular extra"},
+  {name:"Seine River Cruise",cat:"Relaxation",desc:"A boat cruise past Notre-Dame, the Louvre and the Eiffel Tower, popular at sunset.",ticket:"€15–20"},
+  {name:"Le Marais",cat:"Shopping",desc:"A historic district of boutiques, galleries and falafel stalls in narrow medieval streets.",ticket:"Free (shopping extra)"}
+ ],
+ "bali":[
+  {name:"Tanah Lot Temple",cat:"Culture & Heritage",desc:"A Hindu sea temple perched on a rock formation, famous for sunset silhouettes.",ticket:"~IDR 60,000"},
+  {name:"Uluwatu Temple",cat:"Culture & Heritage",desc:"A clifftop temple on Bali's southwestern tip, known for its Kecak fire dance at sunset.",ticket:"~IDR 50,000"},
+  {name:"Tegallalang Rice Terraces",cat:"Nature",desc:"Iconic stepped rice paddies near Ubud, popular for photos and short walks.",ticket:"~IDR 15,000–25,000 donation"},
+  {name:"Ubud Monkey Forest",cat:"Nature",desc:"A sacred forest sanctuary in Ubud, home to long-tailed macaques and moss-covered temples.",ticket:"~IDR 80,000"},
+  {name:"Mount Batur Sunrise Trek",cat:"Adventure",desc:"A pre-dawn hike up an active volcano for sunrise views over Lake Batur.",ticket:"~IDR 350,000–500,000 with guide"},
+  {name:"Kuta Beach",cat:"Relaxation",desc:"Bali's original tourist beach, known for surf breaks and sunset crowds.",ticket:"Free"}
+ ],
+ "dubai":[
+  {name:"Burj Khalifa",cat:"Culture & Heritage",desc:"The world's tallest building, with observation decks on the 124th, 125th and 148th floors.",ticket:"AED 169–500+ depending on level"},
+  {name:"Dubai Mall",cat:"Shopping",desc:"One of the world's largest malls, alongside an aquarium and the Dubai Fountain show.",ticket:"Free (shopping extra)"},
+  {name:"Palm Jumeirah",cat:"Relaxation",desc:"The artificial palm-shaped island of resorts, beach clubs and the Atlantis resort.",ticket:"Varies by beach club/resort"},
+  {name:"Dubai Marina",cat:"Nightlife",desc:"A skyscraper-lined waterfront strip of restaurants, bars and a lively promenade.",ticket:"Free (dining extra)"},
+  {name:"Gold Souk",cat:"Shopping",desc:"A historic market in Deira lined with gold and jewellery shops.",ticket:"Free (shopping extra)"},
+  {name:"Desert Safari",cat:"Adventure",desc:"Dune bashing, camel rides and a Bedouin-style dinner camp in the desert outside the city.",ticket:"AED 150–350"}
+ ],
+ "rishikesh":[
+  {name:"Laxman Jhula",cat:"Culture & Heritage",desc:"An iconic iron suspension bridge over the Ganges, lined with shops and temples on both banks.",ticket:"Free"},
+  {name:"Triveni Ghat Ganga Aarti",cat:"Culture & Heritage",desc:"An evening river-worship ceremony with lamps, chanting and music on the banks of the Ganges.",ticket:"Free"},
+  {name:"Ganga River Rafting",cat:"Adventure",desc:"White-water rafting stretches on the Ganges ranging from gentle to more demanding rapids.",ticket:"₹400–1,200 depending on stretch"},
+  {name:"Beatles Ashram (Chaurasi Kutia)",cat:"Culture & Heritage",desc:"The abandoned ashram where The Beatles studied meditation in 1968, now covered in graffiti art.",ticket:"₹150 (Indians), ₹600 (Foreigners)"},
+  {name:"Neelkanth Mahadev Temple",cat:"Culture & Heritage",desc:"A Shiva temple in the hills above Rishikesh, reached by a scenic mountain drive.",ticket:"Free"},
+  {name:"Parmarth Niketan",cat:"Relaxation",desc:"One of Rishikesh's largest ashrams, known for yoga sessions and its riverside evening aarti.",ticket:"Free (courses extra)"}
+ ],
+ "shimla":[
+  {name:"The Ridge, Shimla",cat:"Relaxation",desc:"A large open promenade at the heart of Shimla with mountain views, framed by colonial buildings.",ticket:"Free"},
+  {name:"Mall Road, Shimla",cat:"Shopping",desc:"The town's pedestrian-only high street of shops, cafés and colonial architecture.",ticket:"Free (shopping extra)"},
+  {name:"Jakhoo Temple",cat:"Culture & Heritage",desc:"A hilltop Hanuman temple with a giant statue and panoramic views over Shimla.",ticket:"Free"},
+  {name:"Christ Church, Shimla",cat:"Culture & Heritage",desc:"A neo-Gothic church on the Ridge, one of North India's oldest churches.",ticket:"Free"},
+  {name:"Kufri",cat:"Adventure",desc:"A hill station near Shimla known for horse rides, a small zoo and winter snow activities.",ticket:"₹100–300 activities extra"}
+ ],
+ "mumbai":[
+  {name:"Gateway of India",cat:"Culture & Heritage",desc:"A basalt arch monument on the Mumbai waterfront, built to commemorate King George V's 1911 visit.",ticket:"Free"},
+  {name:"Marine Drive",cat:"Relaxation",desc:"A sweeping curved seafront promenade known as the 'Queen's Necklace' for its night-time lights.",ticket:"Free"},
+  {name:"Elephanta Caves",cat:"Culture & Heritage",desc:"Rock-cut cave temples on an island in Mumbai harbour, a UNESCO World Heritage Site reached by ferry.",ticket:"₹600 (Foreigners), ₹40 (Indians) + ferry"},
+  {name:"Chhatrapati Shivaji Maharaj Terminus",cat:"Culture & Heritage",desc:"A UNESCO-listed Victorian Gothic railway station and one of Mumbai's architectural landmarks.",ticket:"Free (viewing exterior)"},
+  {name:"Colaba Causeway",cat:"Shopping",desc:"A bustling street market for clothes, accessories and antiques in South Mumbai.",ticket:"Free (shopping extra)"},
+  {name:"Juhu Beach",cat:"Relaxation",desc:"A popular beach known for street food stalls and sunset crowds, near the film industry hub.",ticket:"Free"}
+ ],
+ "varanasi":[
+  {name:"Kashi Vishwanath Temple",cat:"Culture & Heritage",desc:"One of the holiest Shiva temples in India, at the heart of Varanasi's old city.",ticket:"Free (security check required)"},
+  {name:"Dashashwamedh Ghat Ganga Aarti",cat:"Culture & Heritage",desc:"Varanasi's main ghat, host to a large nightly fire-and-lamp ceremony on the Ganges.",ticket:"Free"},
+  {name:"Sarnath",cat:"Culture & Heritage",desc:"The site where the Buddha gave his first sermon, with ancient stupas and a museum, just outside Varanasi.",ticket:"₹300 (Foreigners), ₹25 (Indians)"},
+  {name:"Ganges Boat Ride",cat:"Relaxation",desc:"A sunrise or sunset rowboat ride along the ghats, the classic way to see the city from the river.",ticket:"₹200–600 depending on duration"},
+  {name:"Assi Ghat",cat:"Relaxation",desc:"A lively ghat popular with students and travelers, with its own evening aarti and riverside cafés.",ticket:"Free"}
+ ],
+ "darjeeling":[
+  {name:"Tiger Hill",cat:"Nature",desc:"A pre-dawn viewpoint famous for sunrise views over Kanchenjunga, the world's third-highest peak.",ticket:"₹50–100 entry"},
+  {name:"Darjeeling Himalayan Railway",cat:"Culture & Heritage",desc:"A UNESCO World Heritage narrow-gauge 'Toy Train' winding through the hills since 1881.",ticket:"₹1,000–1,500 joy ride"},
+  {name:"Padmaja Naidu Himalayan Zoological Park",cat:"Nature",desc:"A high-altitude zoo specialising in snow leopards and red pandas.",ticket:"₹100 (Indians), ₹200 (Foreigners)"},
+  {name:"Happy Valley Tea Estate",cat:"Nature",desc:"One of Darjeeling's oldest working tea gardens, open for tours of the plantation and factory.",ticket:"₹50–100 tour"},
+  {name:"Batasia Loop",cat:"Culture & Heritage",desc:"A spiral railway loop with a war memorial and garden, popular for mountain views.",ticket:"₹20"}
+ ],
+ "london":[
+  {name:"Tower of London",cat:"Culture & Heritage",desc:"A historic castle and former royal prison on the Thames, home to the Crown Jewels.",ticket:"£29.90"},
+  {name:"British Museum",cat:"Culture & Heritage",desc:"One of the world's great museums, holding the Rosetta Stone and Elgin Marbles among millions of objects.",ticket:"Free"},
+  {name:"Buckingham Palace",cat:"Culture & Heritage",desc:"The monarch's official London residence, known for the Changing of the Guard ceremony.",ticket:"Free (exterior); State Rooms seasonal, ~£30"},
+  {name:"London Eye",cat:"Relaxation",desc:"A giant observation wheel on the South Bank with views over the Thames and city skyline.",ticket:"£30–40"},
+  {name:"Camden Market",cat:"Shopping",desc:"An alternative-culture market of stalls, street food and vintage shops beside Regent's Canal.",ticket:"Free (shopping extra)"},
+  {name:"West End Theatre",cat:"Nightlife",desc:"London's theatre district, home to long-running musicals and plays around Leicester Square.",ticket:"£25–150 per show"}
+ ],
+ "singapore":[
+  {name:"Gardens by the Bay",cat:"Nature",desc:"A futuristic nature park of Supertrees and climate-controlled domes beside Marina Bay.",ticket:"Free gardens; domes/skyway SGD 20–32"},
+  {name:"Marina Bay Sands SkyPark",cat:"Culture & Heritage",desc:"An observation deck atop the iconic three-tower hotel, overlooking the entire city skyline.",ticket:"SGD 26–32"},
+  {name:"Sentosa Island",cat:"Relaxation",desc:"A resort island with beaches, Universal Studios and cable-car access from the mainland.",ticket:"Free entry; attractions extra"},
+  {name:"Merlion Park",cat:"Culture & Heritage",desc:"Home to Singapore's half-lion, half-fish mascot statue, with skyline views across the bay.",ticket:"Free"},
+  {name:"Chinatown, Singapore",cat:"Food",desc:"A historic district of temples, hawker food centres and souvenir shops.",ticket:"Free (food extra)"}
+ ],
+ "bangkok":[
+  {name:"Grand Palace",cat:"Culture & Heritage",desc:"The former royal residence and most sacred site in Thailand, home to the Emerald Buddha.",ticket:"THB 500"},
+  {name:"Wat Arun",cat:"Culture & Heritage",desc:"The riverside 'Temple of Dawn', known for its distinctive porcelain-encrusted spires.",ticket:"THB 100"},
+  {name:"Wat Pho",cat:"Culture & Heritage",desc:"Home to a giant 46-metre reclining Buddha and Thailand's oldest traditional massage school.",ticket:"THB 300"},
+  {name:"Chatuchak Weekend Market",cat:"Shopping",desc:"One of the world's largest weekend markets, with thousands of stalls across a huge site.",ticket:"Free (shopping extra)"},
+  {name:"Khao San Road",cat:"Nightlife",desc:"Bangkok's famous backpacker strip of bars, street food and night markets.",ticket:"Free (food/drink extra)"}
+ ],
+ "tokyo":[
+  {name:"Senso-ji Temple",cat:"Culture & Heritage",desc:"Tokyo's oldest temple, in Asakusa, approached through the Kaminarimon Gate and a market street.",ticket:"Free"},
+  {name:"Shibuya Crossing",cat:"Culture & Heritage",desc:"The world's busiest pedestrian crossing, a defining image of modern Tokyo.",ticket:"Free"},
+  {name:"Tokyo Tower",cat:"Culture & Heritage",desc:"A red-and-white lattice tower inspired by the Eiffel Tower, with two observation decks.",ticket:"¥1,200–3,000 depending on deck"},
+  {name:"Meiji Shrine",cat:"Culture & Heritage",desc:"A forested Shinto shrine near Harajuku, dedicated to Emperor Meiji and Empress Shoken.",ticket:"Free"},
+  {name:"Tsukiji Outer Market",cat:"Food",desc:"A dense market street of seafood stalls and sushi counters near the old fish market site.",ticket:"Free (food extra)"},
+  {name:"Akihabara",cat:"Shopping",desc:"Tokyo's electronics and anime/manga culture district, packed with arcades and specialty shops.",ticket:"Free (shopping extra)"}
+ ],
+ "rome":[
+  {name:"Colosseum",cat:"Culture & Heritage",desc:"The largest amphitheatre ever built, and ancient Rome's arena for gladiatorial contests.",ticket:"€18 (combined with Roman Forum/Palatine Hill)"},
+  {name:"Trevi Fountain",cat:"Culture & Heritage",desc:"A Baroque fountain where visitors traditionally toss a coin to ensure a return to Rome.",ticket:"Free"},
+  {name:"Vatican Museums & Sistine Chapel",cat:"Culture & Heritage",desc:"A vast museum complex ending in Michelangelo's famous ceiling in the Sistine Chapel.",ticket:"€20"},
+  {name:"Roman Forum",cat:"Culture & Heritage",desc:"The political and social centre of ancient Rome, now a sprawling archaeological site.",ticket:"Included with Colosseum combo ticket"},
+  {name:"Trastevere",cat:"Food",desc:"A cobblestoned neighbourhood across the Tiber known for trattorias and evening atmosphere.",ticket:"Free (dining extra)"}
+ ],
+ "new york":[
+  {name:"Statue of Liberty",cat:"Culture & Heritage",desc:"The 1886 Neoclassical statue on Liberty Island, an enduring symbol of the United States.",ticket:"$24.50 ferry + pedestal"},
+  {name:"Central Park",cat:"Nature",desc:"An 843-acre park in the middle of Manhattan, with lakes, meadows and walking paths.",ticket:"Free"},
+  {name:"Times Square",cat:"Culture & Heritage",desc:"The neon-lit commercial hub of Midtown Manhattan, home to Broadway theatres.",ticket:"Free"},
+  {name:"Empire State Building",cat:"Culture & Heritage",desc:"An Art Deco skyscraper with observation decks on the 86th and 102nd floors.",ticket:"$44–79 depending on deck"},
+  {name:"Metropolitan Museum of Art",cat:"Culture & Heritage",desc:"One of the world's largest art museums, spanning 5,000 years of art on Fifth Avenue.",ticket:"$30 (suggested for NY residents)"},
+  {name:"Brooklyn Bridge",cat:"Nature",desc:"An 1883 suspension bridge with a pedestrian walkway offering skyline views over the East River.",ticket:"Free"}
+ ],
+ "sydney":[
+  {name:"Sydney Opera House",cat:"Culture & Heritage",desc:"The sail-roofed performing arts venue on Sydney Harbour, a UNESCO World Heritage Site.",ticket:"Guided tour ~AUD 45; shows vary"},
+  {name:"Sydney Harbour Bridge",cat:"Adventure",desc:"An iconic steel arch bridge; climb to the summit or simply walk across for harbour views.",ticket:"Free to walk; climb ~AUD 175–400"},
+  {name:"Bondi Beach",cat:"Relaxation",desc:"Australia's best-known beach, with a coastal walk to Coogee and a strong surf culture.",ticket:"Free"},
+  {name:"Darling Harbour",cat:"Food",desc:"A waterfront precinct of restaurants, an aquarium and regular fireworks displays.",ticket:"Free (attractions extra)"},
+  {name:"Royal Botanic Garden Sydney",cat:"Nature",desc:"Harbourside gardens next to the Opera House, with views back across to the bridge.",ticket:"Free"}
+ ],
+ "amsterdam":[
+  {name:"Anne Frank House",cat:"Culture & Heritage",desc:"The canal house where Anne Frank and her family hid during WWII, now a museum.",ticket:"€16 (advance booking essential)"},
+  {name:"Van Gogh Museum",cat:"Culture & Heritage",desc:"The world's largest collection of Van Gogh's paintings and letters.",ticket:"€22"},
+  {name:"Rijksmuseum",cat:"Culture & Heritage",desc:"The Dutch national museum, home to Rembrandt's 'The Night Watch' and Vermeer's works.",ticket:"€22.50"},
+  {name:"Canal Cruise, Amsterdam",cat:"Relaxation",desc:"A boat tour through Amsterdam's UNESCO-listed 17th-century canal ring.",ticket:"€18–25"},
+  {name:"Jordaan District",cat:"Shopping",desc:"A charming former working-class neighbourhood of narrow streets, boutiques and cafés.",ticket:"Free (shopping extra)"}
+ ],
+ "kathmandu":[
+  {name:"Pashupatinath Temple",cat:"Culture & Heritage",desc:"A major Hindu temple complex on the Bagmati River, a UNESCO World Heritage Site.",ticket:"NPR 1,000 (Foreigners)"},
+  {name:"Boudhanath Stupa",cat:"Culture & Heritage",desc:"One of the largest Buddhist stupas in the world, ringed by monasteries and prayer wheels.",ticket:"NPR 400"},
+  {name:"Swayambhunath (Monkey Temple)",cat:"Culture & Heritage",desc:"A hilltop stupa overlooking Kathmandu Valley, known for its resident monkeys.",ticket:"NPR 200"},
+  {name:"Kathmandu Durbar Square",cat:"Culture & Heritage",desc:"A UNESCO-listed plaza of temples and the old royal palace in the heart of the city.",ticket:"NPR 1,000 (Foreigners)"},
+  {name:"Thamel",cat:"Shopping",desc:"Kathmandu's tourist and trekking-gear district, dense with shops, cafés and guesthouses.",ticket:"Free (shopping extra)"}
+ ],
+ "istanbul":[
+  {name:"Hagia Sophia",cat:"Culture & Heritage",desc:"A former Byzantine cathedral and Ottoman mosque, now a working mosque, famed for its vast dome.",ticket:"Free (donation-based)"},
+  {name:"Blue Mosque",cat:"Culture & Heritage",desc:"The Sultan Ahmed Mosque, known for its six minarets and blue Iznik tilework.",ticket:"Free"},
+  {name:"Topkapi Palace",cat:"Culture & Heritage",desc:"The opulent former residence of Ottoman sultans, overlooking the Bosphorus.",ticket:"~₺1,700"},
+  {name:"Grand Bazaar",cat:"Shopping",desc:"One of the world's oldest covered markets, with thousands of shops across sixty-plus streets.",ticket:"Free (shopping extra)"},
+  {name:"Bosphorus Cruise",cat:"Relaxation",desc:"A boat trip along the strait dividing Europe and Asia, past palaces and waterfront mansions.",ticket:"~₺300–600"}
+ ],
+ "lucknow":[
+  {name:"Bara Imambara",cat:"Culture & Heritage",desc:"An 18th-century Nawabi hall complex famous for the Bhool Bhulaiya, a maze of narrow interconnecting passages built into its upper storey.",ticket:"₹500 (Foreigners), ₹50 (Indians)"},
+  {name:"Chota Imambara",cat:"Culture & Heritage",desc:"An ornately decorated mausoleum known as the 'Palace of Lights' for its chandeliers and gilded domes.",ticket:"₹500 (Foreigners), ₹25 (Indians)"},
+  {name:"Rumi Darwaza",cat:"Culture & Heritage",desc:"A towering 18th-century Awadhi-style gateway, one of Lucknow's best-known landmarks.",ticket:"Free"},
+  {name:"The Residency, Lucknow",cat:"Culture & Heritage",desc:"The ruins of the British Residency, site of the 1857 siege of Lucknow, now a memorial park.",ticket:"₹300 (Foreigners), ₹25 (Indians)"},
+  {name:"Hazratganj",cat:"Shopping",desc:"Lucknow's iconic shopping street of colonial-era buildings, cafés and boutiques.",ticket:"Free (shopping extra)"},
+  {name:"Tunday Kababi, Chowk",cat:"Food",desc:"A century-old eatery in the old Chowk quarter famous for its melt-in-the-mouth galouti kebabs.",ticket:"₹150–400 for a meal"},
+  {name:"Ambedkar Memorial Park",cat:"Nature",desc:"A large park of sandstone monuments and elephant statues, popular for evening walks.",ticket:"₹25"}
+ ],
+ "kanpur":[
+  {name:"JK Temple",cat:"Culture & Heritage",desc:"A marble Radha-Krishna temple built by the Singhania family, known for its intricate carvings.",ticket:"Free"},
+  {name:"Allen Forest Zoo",cat:"Nature",desc:"One of Asia's largest zoos by area, home to tigers, lions and a wide range of native species.",ticket:"₹60 (Adults), ₹30 (Children)"},
+  {name:"Bithoor",cat:"Culture & Heritage",desc:"A historic riverside town near Kanpur linked to the Ramayana and the 1857 uprising, with ghats and temples.",ticket:"Free"},
+  {name:"Nana Rao Park",cat:"Relaxation",desc:"A large central park (formerly Company Bagh) with gardens, a musical fountain and a memorial to 1857 martyrs.",ticket:"Free"},
+  {name:"Green Park Stadium",cat:"Adventure",desc:"Kanpur's historic international cricket ground, host to Test matches since 1952.",ticket:"Match tickets vary"},
+  {name:"Moti Jheel",cat:"Nature",desc:"A landscaped lake and park popular for boating and evening walks.",ticket:"Free; boating extra"}
+ ],
+ "bengaluru":[
+  {name:"Lalbagh Botanical Garden",cat:"Nature",desc:"A 240-acre botanical garden laid out in the 18th century, with a glasshouse modeled on London's Crystal Palace.",ticket:"₹25"},
+  {name:"Bangalore Palace",cat:"Culture & Heritage",desc:"A Tudor-style palace built in 1887, still partly owned by the erstwhile Mysore royal family.",ticket:"₹280 (Indians), ₹460 (Foreigners)"},
+  {name:"Cubbon Park",cat:"Relaxation",desc:"A sprawling green park in the city centre, home to several colonial-era buildings.",ticket:"Free"},
+  {name:"Vidhana Soudha",cat:"Culture & Heritage",desc:"Karnataka's imposing neo-Dravidian state legislature building, illuminated at night.",ticket:"Free (exterior viewing)"},
+  {name:"Nandi Hills",cat:"Adventure",desc:"A hill fortress an hour from the city, popular for sunrise treks and paragliding.",ticket:"₹30"},
+  {name:"MG Road & Commercial Street",cat:"Shopping",desc:"Bengaluru's best-known shopping and café strip in the heart of the city.",ticket:"Free (shopping extra)"}
+ ],
+ "chennai":[
+  {name:"Marina Beach",cat:"Relaxation",desc:"One of the world's longest urban beaches, a popular spot for evening walks and street food.",ticket:"Free"},
+  {name:"Kapaleeshwarar Temple",cat:"Culture & Heritage",desc:"A vividly painted 7th-century Dravidian-style temple dedicated to Shiva, in Mylapore.",ticket:"Free"},
+  {name:"Fort St. George",cat:"Culture & Heritage",desc:"The first English fortress in India (1644), now housing a museum and the Tamil Nadu legislature.",ticket:"₹15 (museum)"},
+  {name:"San Thome Basilica",cat:"Culture & Heritage",desc:"A Neo-Gothic basilica built over the tomb of St. Thomas the Apostle.",ticket:"Free"},
+  {name:"Mahabalipuram Shore Temple",cat:"Culture & Heritage",desc:"A UNESCO World Heritage 8th-century stone temple by the sea, on a day trip from Chennai.",ticket:"₹600 (Foreigners), ₹40 (Indians)"},
+  {name:"Government Museum, Egmore",cat:"Culture & Heritage",desc:"One of India's oldest museums, with an extensive bronze gallery and archaeology wing.",ticket:"₹250 (Foreigners), ₹15 (Indians)"}
+ ],
+ "kolkata":[
+  {name:"Victoria Memorial",cat:"Culture & Heritage",desc:"A grand white-marble memorial to Queen Victoria, now a museum set in landscaped gardens.",ticket:"₹500 (Foreigners), ₹30 (Indians)"},
+  {name:"Howrah Bridge",cat:"Culture & Heritage",desc:"An iconic cantilever bridge over the Hooghly River, one of the busiest bridges in the world.",ticket:"Free"},
+  {name:"Dakshineswar Kali Temple",cat:"Culture & Heritage",desc:"A riverside temple complex associated with the mystic Ramakrishna Paramahansa.",ticket:"Free"},
+  {name:"Park Street",cat:"Nightlife",desc:"Kolkata's best-known restaurant and nightlife strip, especially lively around Christmas.",ticket:"Free (dining extra)"},
+  {name:"Indian Museum, Kolkata",cat:"Culture & Heritage",desc:"The oldest and largest museum in India, founded in 1814, spanning art, archaeology and natural history.",ticket:"₹500 (Foreigners), ₹50 (Indians)"},
+  {name:"College Street",cat:"Shopping",desc:"Asia's largest second-hand book market, lined with stalls along a historic street.",ticket:"Free (shopping extra)"}
+ ],
+ "hyderabad":[
+  {name:"Charminar",cat:"Culture & Heritage",desc:"A 16th-century mosque and monument with four grand arches, the symbol of Hyderabad.",ticket:"₹250 (Foreigners), ₹25 (Indians)"},
+  {name:"Golconda Fort",cat:"Culture & Heritage",desc:"A massive hilltop fortress once famed as a diamond-trading centre, known for its acoustic engineering.",ticket:"₹300 (Foreigners), ₹25 (Indians)"},
+  {name:"Ramoji Film City",cat:"Adventure",desc:"One of the world's largest film studio complexes, open to visitors as a theme park.",ticket:"₹1,150–1,650"},
+  {name:"Hussain Sagar Lake",cat:"Relaxation",desc:"A large heart-shaped lake with a giant Buddha statue on an island at its centre.",ticket:"Free; boat ride extra"},
+  {name:"Chowmahalla Palace",cat:"Culture & Heritage",desc:"The former seat of the Nizams of Hyderabad, with grand courtyards and a vintage car collection.",ticket:"₹150 (Foreigners), ₹80 (Indians)"},
+  {name:"Laad Bazaar",cat:"Shopping",desc:"A historic market beside Charminar famous for bangles and pearl jewellery.",ticket:"Free (shopping extra)"}
+ ],
+ "pune":[
+  {name:"Shaniwar Wada",cat:"Culture & Heritage",desc:"The fortified 18th-century palace of the Peshwa rulers, now atmospheric ruins in the old city.",ticket:"₹125 (Foreigners), ₹25 (Indians)"},
+  {name:"Aga Khan Palace",cat:"Culture & Heritage",desc:"A grand 1892 palace where Mahatma Gandhi was held during the Quit India Movement.",ticket:"₹300 (Foreigners), ₹25 (Indians)"},
+  {name:"Sinhagad Fort",cat:"Adventure",desc:"A hilltop fort on the outskirts of Pune, popular for a moderate trek and valley views.",ticket:"Free; parking extra"},
+  {name:"Dagdusheth Halwai Ganpati Temple",cat:"Culture & Heritage",desc:"One of Pune's most visited temples, known for its gold-plated idol and Ganesh Chaturthi celebrations.",ticket:"Free"},
+  {name:"Koregaon Park",cat:"Nightlife",desc:"An upscale district of cafés, bars and the Osho International Meditation Resort.",ticket:"Free (dining extra)"}
+ ],
+ "amritsar":[
+  {name:"Golden Temple (Harmandir Sahib)",cat:"Culture & Heritage",desc:"Sikhism's holiest shrine, its gold-plated sanctum set in a sacred pool, with a free community kitchen for all visitors.",ticket:"Free"},
+  {name:"Jallianwala Bagh",cat:"Culture & Heritage",desc:"A memorial garden marking the site of the 1919 massacre, with a museum on the Indian independence movement.",ticket:"Free"},
+  {name:"Wagah Border Retreat Ceremony",cat:"Culture & Heritage",desc:"A theatrical daily flag-lowering ceremony at the India–Pakistan border, with crowds cheering both sides.",ticket:"Free"},
+  {name:"Partition Museum",cat:"Culture & Heritage",desc:"A museum documenting the human stories of the 1947 Partition of India.",ticket:"₹200 (Foreigners), ₹75 (Indians)"},
+  {name:"Kesar Da Dhaba",cat:"Food",desc:"A century-old eatery in the old city famous for its dal makhani and stuffed kulchas.",ticket:"₹150–400 for a meal"}
+ ],
+ "mysuru":[
+  {name:"Mysore Palace",cat:"Culture & Heritage",desc:"An opulent Indo-Saracenic palace, illuminated with nearly 100,000 lights on Sunday evenings.",ticket:"₹200 (Foreigners), ₹70 (Indians)"},
+  {name:"Chamundi Hills",cat:"Culture & Heritage",desc:"A hilltop temple dedicated to Goddess Chamundeshwari, with sweeping views over Mysuru.",ticket:"Free"},
+  {name:"Brindavan Gardens",cat:"Nature",desc:"Terraced ornamental gardens below the Krishna Raja Sagara dam, known for musical fountains.",ticket:"₹60–100"},
+  {name:"St. Philomena's Church",cat:"Culture & Heritage",desc:"One of the tallest churches in Asia, built in Neo-Gothic style with twin spires.",ticket:"Free"},
+  {name:"Devaraja Market",cat:"Shopping",desc:"A century-old market famous for flowers, spices, sandalwood and local produce.",ticket:"Free (shopping extra)"}
+ ],
+ "pondicherry":[
+  {name:"Promenade Beach",cat:"Relaxation",desc:"A rocky, car-free seafront promenade in the French Quarter, popular for evening strolls.",ticket:"Free"},
+  {name:"Auroville",cat:"Culture & Heritage",desc:"An experimental universal township centred on the golden geodesic Matrimandir, open to visitors.",ticket:"Free grounds; Matrimandir viewing by pass"},
+  {name:"Sri Aurobindo Ashram",cat:"Relaxation",desc:"A serene spiritual ashram in the heart of Pondicherry's French Quarter.",ticket:"Free"},
+  {name:"French Quarter (White Town)",cat:"Culture & Heritage",desc:"Colonial-era streets of mustard-and-white villas, boutiques and cafés.",ticket:"Free (shopping/dining extra)"},
+  {name:"Paradise Beach",cat:"Adventure",desc:"A secluded beach reached only by a short boat ride, popular for watersports.",ticket:"Boat ride ~₹150"}
+ ],
+ "coorg":[
+  {name:"Abbey Falls",cat:"Nature",desc:"A waterfall set amid coffee and spice plantations near Madikeri.",ticket:"₹15"},
+  {name:"Raja's Seat",cat:"Relaxation",desc:"A garden viewpoint once used by Kodagu kings to watch the sunset over the hills.",ticket:"₹10"},
+  {name:"Dubare Elephant Camp",cat:"Adventure",desc:"A riverside camp where visitors can feed, bathe and interact with trained elephants.",ticket:"₹50 entry; activities extra"},
+  {name:"Talakaveri",cat:"Culture & Heritage",desc:"The sacred source of the River Kaveri, high in the Brahmagiri hills.",ticket:"Free"},
+  {name:"Coffee Plantation Tour",cat:"Nature",desc:"Guided walks through Coorg's coffee estates, explaining cultivation and roasting.",ticket:"₹200–500"}
+ ],
+ "ooty":[
+  {name:"Ooty Lake",cat:"Relaxation",desc:"An artificial lake at the base of the Nilgiris, popular for boating.",ticket:"₹30 entry; boating extra"},
+  {name:"Government Botanical Garden",cat:"Nature",desc:"Terraced gardens laid out in 1848, home to a fossilised tree over 20 million years old.",ticket:"₹50"},
+  {name:"Doddabetta Peak",cat:"Nature",desc:"The highest point in the Nilgiris, with a telescope house and panoramic views.",ticket:"₹20"},
+  {name:"Nilgiri Mountain Railway",cat:"Culture & Heritage",desc:"A UNESCO World Heritage 'toy train' climbing through tea gardens and tunnels since 1908.",ticket:"₹295–545"},
+  {name:"Rose Garden, Ooty",cat:"Nature",desc:"One of India's largest rose gardens, with over 20,000 varieties.",ticket:"₹35"}
+ ],
+ "gangtok":[
+  {name:"MG Marg",cat:"Shopping",desc:"Gangtok's pedestrian-only main street of shops, cafés and street performers.",ticket:"Free (shopping extra)"},
+  {name:"Tsomgo Lake",cat:"Nature",desc:"A glacial lake at nearly 3,800m, reached via a scenic mountain drive (permit required).",ticket:"Permit ~₹600; entry ₹10"},
+  {name:"Rumtek Monastery",cat:"Culture & Heritage",desc:"One of Sikkim's largest monasteries, seat-in-exile of the Karmapa lineage.",ticket:"Free"},
+  {name:"Nathula Pass",cat:"Adventure",desc:"A high Himalayan pass on the India–China border, open to visitors with a permit.",ticket:"Permit ~₹600–1,200"},
+  {name:"Ganesh Tok",cat:"Nature",desc:"A small hilltop shrine and viewpoint overlooking Gangtok town.",ticket:"Free"}
+ ],
+ "mount abu":[
+  {name:"Dilwara Jain Temples",cat:"Culture & Heritage",desc:"11th–13th century Jain temples famed for extraordinarily intricate marble carving.",ticket:"Free (camera fee extra)"},
+  {name:"Nakki Lake",cat:"Relaxation",desc:"A small lake at the heart of Mount Abu, popular for boating and sunset views.",ticket:"Free; boating extra"},
+  {name:"Guru Shikhar",cat:"Nature",desc:"The highest peak in the Aravalli Range, with a temple at the summit.",ticket:"Free"},
+  {name:"Sunset Point, Mount Abu",cat:"Relaxation",desc:"A cliffside viewpoint drawing crowds every evening for sunset over the hills.",ticket:"Free"},
+  {name:"Mount Abu Wildlife Sanctuary",cat:"Nature",desc:"A forested sanctuary home to sloth bears, leopards and langurs.",ticket:"₹120 (Indians), ₹480 (Foreigners)"}
+ ],
+ "jodhpur":[
+  {name:"Mehrangarh Fort",cat:"Culture & Heritage",desc:"One of India's largest forts, towering over the Blue City with a renowned museum inside.",ticket:"₹600 (Foreigners), ₹100 (Indians)"},
+  {name:"Umaid Bhawan Palace",cat:"Culture & Heritage",desc:"A 20th-century palace still partly home to the royal family, with a museum wing open to visitors.",ticket:"₹200 (Foreigners), ₹100 (Indians)"},
+  {name:"Jaswant Thada",cat:"Culture & Heritage",desc:"An elegant white marble cenotaph memorial to Maharaja Jaswant Singh II.",ticket:"₹50 (Foreigners), ₹30 (Indians)"},
+  {name:"Sardar Market & Clock Tower",cat:"Shopping",desc:"A bustling bazaar around Jodhpur's landmark clock tower, known for spices and textiles.",ticket:"Free (shopping extra)"},
+  {name:"Blue City Old Town Walk",cat:"Culture & Heritage",desc:"Narrow lanes of indigo-painted houses beneath Mehrangarh Fort.",ticket:"Free"}
+ ],
+ "jaisalmer":[
+  {name:"Jaisalmer Fort (Sonar Quila)",cat:"Culture & Heritage",desc:"A 'living fort' of golden sandstone still inhabited by thousands, rising from the Thar Desert.",ticket:"₹250 (Foreigners), ₹50 (Indians)"},
+  {name:"Patwon Ki Haveli",cat:"Culture & Heritage",desc:"A cluster of ornately carved 19th-century mansions built by wealthy merchants.",ticket:"₹200 (Foreigners), ₹100 (Indians)"},
+  {name:"Sam Sand Dunes",cat:"Adventure",desc:"Rolling desert dunes outside the city, the classic spot for camel safaris and desert camping.",ticket:"Camel safari ~₹500–1,500"},
+  {name:"Gadisar Lake",cat:"Relaxation",desc:"A scenic rainwater lake ringed by temples and shrines, popular at sunset.",ticket:"Free; boating extra"},
+  {name:"Bada Bagh",cat:"Culture & Heritage",desc:"A set of royal cenotaphs on a hillside overlooking a small oasis, a favourite sunset spot.",ticket:"₹50"}
+ ],
+ "ladakh":[
+  {name:"Pangong Lake",cat:"Nature",desc:"A vast high-altitude lake that changes colour through the day, straddling the India–China border.",ticket:"Permit required; ~₹400"},
+  {name:"Leh Palace",cat:"Culture & Heritage",desc:"A 17th-century royal palace overlooking Leh, modeled on the Potala Palace in Lhasa.",ticket:"₹300 (Foreigners), ₹20 (Indians)"},
+  {name:"Nubra Valley",cat:"Adventure",desc:"A high desert valley reached via Khardung La, known for double-humped Bactrian camel rides.",ticket:"Permit required; camel ride ~₹300"},
+  {name:"Magnetic Hill",cat:"Nature",desc:"A stretch of road with an optical illusion that appears to pull vehicles uphill.",ticket:"Free"},
+  {name:"Thiksey Monastery",cat:"Culture & Heritage",desc:"A twelve-storey monastery resembling Lhasa's Potala Palace, with a large Maitreya Buddha statue.",ticket:"₹100"},
+  {name:"Khardung La",cat:"Adventure",desc:"One of the world's highest motorable mountain passes, a rite of passage for Ladakh road trips.",ticket:"Permit required"}
+ ],
+ "andaman islands":[
+  {name:"Radhanagar Beach",cat:"Relaxation",desc:"A powder-white beach on Havelock Island, repeatedly ranked among Asia's best.",ticket:"Free"},
+  {name:"Cellular Jail",cat:"Culture & Heritage",desc:"A colonial-era prison used to detain freedom fighters, now a museum with a light-and-sound show.",ticket:"₹230 (Foreigners), ₹30 (Indians)"},
+  {name:"Havelock Island",cat:"Relaxation",desc:"The Andamans' most popular island, known for beaches, diving and snorkeling.",ticket:"Ferry ~₹1,000–1,500 return"},
+  {name:"Ross Island",cat:"Culture & Heritage",desc:"The former British administrative headquarters, now atmospheric ruins overtaken by forest.",ticket:"₹30; ferry extra"},
+  {name:"Scuba Diving, Neil Island",cat:"Adventure",desc:"Coral-reef diving and snorkeling trips run from Neil and Havelock islands.",ticket:"₹3,500–5,500 per dive"}
+ ]
+};
+function realKey(dest){return dest.trim().toLowerCase()}
+const HOTEL_NAMES=["The {d} Residency","Blue Horizon Stay","{d} Palace Homestay","Sunset Ridge Retreat","Orchid Boutique Hotel"];
+const WX_ICON=["☀️","⛅","🌦️","🌧️","🌤️"];
+const TICKET={"Nature":["Free","₹50 entry","₹100 (boat ride extra)"],
+ "Culture & Heritage":["₹250 (Foreigners), ₹40 (Indians)","₹600 (Foreigners), ₹50 (Indians)","Free (donations welcome)"],
+ "Food":["Free (food & shopping extra)","₹300 tasting menu"],
+ "Adventure":["₹500 activity fee","₹800 equipment + guide"],
+ "Relaxation":["Free","₹400 session"],
+ "Shopping":["Free (shopping extra)"],
+ "Nightlife":["Free entry","Cover charge may apply"]};
+const DAY_TITLES=["Heritage & Bustle","Imperial Grandeur & Marvels","Serenity & Spiritual Splendour","Markets & Local Life","Nature & Wide-Open Views","Adventure & Adrenaline","Food, Flavours & Nightlife","Riverside & Relaxation","Old Town Wanderings"];
+const STREETS=["MG Road","Church Street","Lake View Lane","Station Road","Palace Road","Marine Drive","Fort Street"];
+function budgetTier(b,days){const perDay=b/days; return perDay<3000?'Budget':perDay<7000?'Moderate Budget':'Premium'}
+const TILE_H=[["#7a4e23","#E2A542"],["#1f4a63","#3f8ab0"],["#4a5a7c","#8a9ecf"]];
+
+let user=null, currentTrip=null, seed=0;
+
+/* ---------- live backend (optional) ----------
+   Only matters when this file is opened on your own machine with the
+   companion backend running (see the project README). Inside the
+   sandboxed claude.ai preview, this fetch is blocked by design and simply
+   fails silently — the app keeps working on its built-in curated/mock
+   data either way. */
+const BACKEND_URL='http://localhost:5175';
+let backendOnline=false;
+(async function checkBackend(){
+ try{
+   const r=await fetch(BACKEND_URL+'/health',{signal:AbortSignal.timeout(1500)});
+   backendOnline=r.ok;
+ }catch(e){backendOnline=false}
+ const el=document.getElementById('backend-badge');
+ if(el){el.textContent=backendOnline?'🟢 Live backend connected':'⚪ Offline mode (built-in data)'; el.title=backendOnline?'Real photos are being fetched from your local backend.':'Start the backend (see README) for real photos from OpenStreetMap/Wikidata.'}
+})();
+async function fetchRealPhotoUrl(query){
+ try{
+   const r=await fetch(BACKEND_URL+'/api/places/search?query='+encodeURIComponent(query),{signal:AbortSignal.timeout(4000)});
+   const data=await r.json();
+   const hit=(data.places||[]).find(p=>p.wikidata);
+   if(!hit)return null;
+   return BACKEND_URL+'/api/places/photo?wikidata='+hit.wikidata;
+ }catch(e){return null}
+}
+async function enhanceWithLiveData(){
+ if(!backendOnline||!currentTrip)return;
+ const t=currentTrip;
+ for(let hi=0;hi<t.hotels.length;hi++){
+   const url=await fetchRealPhotoUrl(t.hotels[hi].name+', '+t.dest);
+   const tile=document.getElementById('hotel-tile-'+hi);
+   if(url&&tile)tile.outerHTML=`<div id="hotel-tile-${hi}" class="h-28 overflow-hidden"><img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.remove()"></div>`;
+ }
+ for(let di=0;di<t.itinerary.length;di++){
+   const day=t.itinerary[di];
+   for(let ai=0;ai<day.acts.length;ai++){
+     const a=day.acts[ai];
+     const url=await fetchRealPhotoUrl(a.text+', '+t.dest);
+     const tile=document.getElementById(`act-tile-${di}-${ai}`);
+     if(url&&tile)tile.outerHTML=`<div id="act-tile-${di}-${ai}" style="width:52px;height:52px;border-radius:12px;overflow:hidden;flex-shrink:0"><img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.remove()"></div>`;
+   }
+ }
+}
+function rnd(){seed=(seed*9301+49297)%233280;return seed/233280}
+function pick(arr){return arr[Math.floor(rnd()*arr.length)]}
+
+/* ---------- auth (localStorage demo) ---------- */
+let mode='login';
+function authMode(m){mode=m;
+ document.getElementById('tab-login').style.background=m==='login'?'var(--amber)':'';
+ document.getElementById('tab-login').style.color=m==='login'?'#1a1204':'';
+ document.getElementById('tab-login').className='flex-1 py-2 rounded-lg font-semibold'+(m==='login'?'':' text-white/70');
+ document.getElementById('tab-reg').style.background=m==='reg'?'var(--amber)':'';
+ document.getElementById('tab-reg').style.color=m==='reg'?'#1a1204':'';
+ document.getElementById('tab-reg').className='flex-1 py-2 rounded-lg font-semibold'+(m==='reg'?'':' text-white/70');
+ document.getElementById('reg-name-wrap').classList.toggle('hide',m!=='reg');
+ document.getElementById('auth-submit').textContent=m==='reg'?'Create account':'Sign in';
+ document.getElementById('auth-error').classList.add('hide');
+ ['auth-email','auth-pass','reg-name'].forEach(clearFieldErr);
+}
+function users(){try{return JSON.parse(localStorage.getItem('vy_users')||'{}')}catch(e){return{}}}
+const EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function markFieldErr(id,show){
+ const el=document.getElementById(id), e=document.getElementById('err-'+id);
+ if(!el)return;
+ el.classList.toggle('invalid',show); if(e)e.classList.toggle('show',show);
+}
+function clearFieldErr(id){markFieldErr(id,false)}
+function togglePw(){
+ const p=document.getElementById('auth-pass'); const eye=document.getElementById('pw-eye');
+ const show=p.type==='password'; p.type=show?'text':'password'; eye.textContent=show?'🙈':'👁';
+}
+function doAuth(){
+ const email=document.getElementById('auth-email').value.trim().toLowerCase();
+ const pass=document.getElementById('auth-pass').value;
+ const name=document.getElementById('reg-name').value.trim();
+ let ok=true;
+ const emailBad=!EMAIL_RE.test(email); markFieldErr('auth-email',emailBad); if(emailBad)ok=false;
+ const passBad=mode==='reg'?pass.length<8:!pass; markFieldErr('auth-pass',passBad); if(passBad)ok=false;
+ if(mode==='reg'){const nameBad=!name; markFieldErr('reg-name',nameBad); if(nameBad)ok=false;}
+ if(!ok)return showErr('Please fix the highlighted field(s) below.');
+ const U=users();
+ if(mode==='reg'){
+   if(U[email])return showErr('An account with this email already exists — sign in instead.');
+   U[email]={name,pass};
+   try{localStorage.setItem('vy_users',JSON.stringify(U))}catch(e){}
+   user={email,name};
+   try{localStorage.setItem('vy_current',JSON.stringify(user))}catch(e){}
+   enterApp(); showToast('Registered successfully ✓');
+   return;
+ }else{
+   if(!U[email]||U[email].pass!==pass)return showErr('No matching account. Check your details or create one.');
+   user={email,name:U[email].name};
+ }
+ try{localStorage.setItem('vy_current',JSON.stringify(user))}catch(e){}
+ enterApp(); showToast('Signed in successfully ✓');
+}
+function showErr(t){const e=document.getElementById('auth-error');e.textContent=t;e.classList.remove('hide')}
+function logout(){user=null;try{localStorage.removeItem('vy_current')}catch(e){}
+ document.getElementById('screen-app').classList.add('hide');
+ document.getElementById('screen-auth').classList.remove('hide');
+}
+function enterApp(){
+ document.getElementById('screen-auth').classList.add('hide');
+ document.getElementById('screen-app').classList.remove('hide');
+ document.getElementById('who').textContent=user.name+' · '+user.email;
+ viewStack=[]; currentView=null;
+ showView('about');
+}
+(function(){try{const u=JSON.parse(localStorage.getItem('vy_current')||'null');if(u){user=u;enterApp();}}catch(e){}})();
+
+/* ---------- view switching — an in-app back stack, not the browser's back
+   button. This runs inside an embedded frame here, where the real back
+   button doesn't reliably reach the page's own history, so navigation is
+   tracked in memory instead and exposed via the on-screen "← Back" button. */
+let viewStack=[], currentView=null;
+function goBack(){
+ if(!viewStack.length)return;
+ const prev=viewStack.pop();
+ showView(prev,true);
+}
+function showView(v,isBack){
+ if(!isBack&&currentView&&currentView!==v)viewStack.push(currentView);
+ currentView=v;
+ document.getElementById('back-btn').classList.toggle('hide',viewStack.length===0);
+ ['about','planner','method','results','trips','contact'].forEach(x=>{
+   const el=document.getElementById('view-'+x);
+   if(x===v){el.classList.remove('hide');el.classList.add('view','view-enter');
+     requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.remove('view-enter')));
+   } else el.classList.add('hide');
+ });
+ document.querySelectorAll('.nav-btn').forEach(b=>b.style.background='transparent');
+ const map={about:0,planner:1,method:2,trips:3,contact:4};
+ const colors={about:'rgba(226,165,66,.25)',planner:'rgba(139,108,240,.3)',method:'rgba(76,134,214,.3)',trips:'rgba(224,87,122,.3)',contact:'rgba(226,121,63,.3)'};
+ if(v in map){const b=document.querySelectorAll('.nav-btn')[map[v]]; if(b)b.style.background=colors[v]}
+ if(v==='trips')renderTrips();
+}
+/* getting around: local conveyance help + saved search history */
+const TRANSPORT_MODES=[
+ ['bus','🚌','Bus','bus stand'],
+ ['bike','🏍️','Bike','bike rental'],
+ ['car','🚗','Car','self-drive car rental'],
+ ['auto','🛺','Auto','auto rickshaw stand'],
+ ['cab','🚕','Cab / Taxi','taxi stand']
+];
+function transportHistKey(){return 'vy_transport_'+(user?user.email:'guest')}
+function transportHistory(){try{return JSON.parse(localStorage.getItem(transportHistKey())||'[]')}catch(e){return[]}}
+function renderGettingAround(){
+ const t=currentTrip;
+ document.getElementById('ga-dest').textContent=t.dest;
+ document.getElementById('ga-modes').innerHTML=TRANSPORT_MODES.map(([key,icon,label])=>
+   `<button class="chip" style="border-color:var(--cyan)" onclick="pickTransportMode('${key}')">${icon} ${label}</button>`).join('');
+ renderTransportHistory();
+}
+function pickTransportMode(key){
+ const t=currentTrip; const m=TRANSPORT_MODES.find(x=>x[0]===key); if(!m)return;
+ const [,icon,label,query]=m;
+ const url=mapsUrl(query+' near '+t.dest);
+ const entry={dest:t.dest,mode:label,icon,query,url,time:new Date().toISOString()};
+ const hist=[entry,...transportHistory()].slice(0,15);
+ try{localStorage.setItem(transportHistKey(),JSON.stringify(hist))}catch(e){}
+ const res=document.getElementById('ga-result');
+ res.classList.remove('hide');
+ res.innerHTML=`<div class="card p-3" style="border-color:var(--cyan)">${icon} Looking for a <b>${label.toLowerCase()}</b> in <b>${t.dest}</b>?
+  <a class="maplink" href="${url}" target="_blank" rel="noopener">Open nearby options on Google Maps ↗</a></div>`;
+ renderTransportHistory();
+ showToast('Saved to your transport search history ✓');
+}
+function renderTransportHistory(){
+ const hist=transportHistory();
+ const el=document.getElementById('ga-history');
+ if(!el)return;
+ el.innerHTML=hist.length?hist.map(h=>{
+   const t=new Date(h.time).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+   return `<a href="${h.url}" target="_blank" rel="noopener" class="flex items-center justify-between text-xs px-2 py-1.5 rounded-lg hover:bg-black/5" style="border:1px solid rgba(63,184,201,.2)">
+     <span>${h.icon} ${h.mode} — ${h.dest}</span><span class="opacity-50">${t}</span></a>`;
+ }).join(''):'<p class="text-xs opacity-50">No searches yet — pick a mode above.</p>';
+}
+function clearTransportHistory(){
+ try{localStorage.removeItem(transportHistKey())}catch(e){}
+ renderTransportHistory(); showToast('Transport search history cleared');
+}
+function mapsUrl(q){return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q)}
+function bookingUrl(hotel,dest){return 'https://www.booking.com/searchresults.html?ss='+encodeURIComponent(hotel+', '+dest)}
+const SLOTS=["Morning","Midday","Afternoon","Evening"];
+const DUR=["1.5 hrs","2 hrs","2.5 hrs","3 hrs","half day"];
+
+/* ---------- generation ---------- */
+function selectedInterests(){return[...document.querySelectorAll('.chip.on[data-i]')].map(c=>c.dataset.i)}
+async function generateTrip(regen){
+ const dest=document.getElementById('f-dest').value.trim()||(regen&&currentTrip?currentTrip.dest:'');
+ const daysRaw=+document.getElementById('f-days').value, budgetRaw=+document.getElementById('f-budget').value,
+   travelRaw=+document.getElementById('f-travel').value;
+ const people={men:+document.getElementById('p-men').value||0,women:+document.getElementById('p-women').value||0,
+   sr:+document.getElementById('p-sr').value||0,child:+document.getElementById('p-child').value||0};
+ if(!regen){
+   let ok=true;
+   if(!validateDestField())ok=false;
+   markFieldErr('f-days',!(daysRaw>=1&&daysRaw<=10)); if(!(daysRaw>=1&&daysRaw<=10))ok=false;
+   markFieldErr('f-budget',!(budgetRaw>=1000)); if(!(budgetRaw>=1000))ok=false;
+   markFieldErr('f-travel',!(travelRaw>=1&&travelRaw<=12)); if(!(travelRaw>=1&&travelRaw<=12))ok=false;
+   const noTravelers=(people.men+people.women+people.sr+people.child)<1;
+   markFieldErr('p-men',noTravelers); if(noTravelers)ok=false;
+   if(!ok){showToast('Please fix the highlighted field(s).','error');return}
+ }
+ const days=regen&&currentTrip?currentTrip.days:Math.max(1,Math.min(10,daysRaw||3));
+ const budget=regen&&currentTrip?currentTrip.budget:Math.max(1000,budgetRaw||10000);
+ const maxTravel=regen&&currentTrip?currentTrip.maxTravel:(travelRaw||4);
+ const trav=Math.max(1,people.men+people.women+people.sr+people.child)||(regen&&currentTrip?currentTrip.trav:1);
+ let interests=selectedInterests(); if(!interests.length)interests=['Culture & Heritage','Food'];
+ seed=regen?Date.now()%100000:[...dest].reduce((a,c)=>a+c.charCodeAt(0),0)+days*7+trav*3;
+
+ const TIMES=[["9:00 AM","1:00 PM"],["2:00 PM","5:00 PM"],["6:00 PM","9:00 PM"]];
+ const realPool=REAL_PLACES[realKey(dest)]||null;
+ const usedReal=new Set();
+ function pickReal(){
+   let pool=realPool.filter(p=>interests.includes(p.cat)&&!usedReal.has(p.name));
+   if(!pool.length)pool=realPool.filter(p=>!usedReal.has(p.name));
+   if(!pool.length){usedReal.clear();pool=realPool.slice();}
+   const p=pick(pool); usedReal.add(p.name); return p;
+ }
+ const itinerary=[]; const usedTitles=new Set();
+ for(let d=1;d<=days;d++){
+   let title=pick(DAY_TITLES),tries=0; while(usedTitles.has(title)&&tries++<8)title=pick(DAY_TITLES); usedTitles.add(title);
+   let acts;
+   if(realPool){
+     acts=[0,1,2].map(i=>{
+       const p=pickReal();
+       return{cat:p.cat,text:p.name,icon:ICON[p.cat],slot:SLOTS[i]||SLOTS[i%SLOTS.length],time:TIMES[i],
+         dur:pick(DUR),rating:(4+rnd()*0.9).toFixed(1),ticket:p.ticket,realDesc:p.desc,isReal:true};
+     });
+   }else{
+     const cats=[pick(interests),pick(interests),pick(interests)];
+     acts=cats.map((cat,i)=>({cat,text:pick(POOL[cat]).replace('{d}',dest),icon:ICON[cat],
+       slot:SLOTS[i]||SLOTS[i%SLOTS.length],time:TIMES[i],dur:pick(DUR),rating:(4+rnd()*0.9).toFixed(1),ticket:pick(TICKET[cat])}));
+   }
+   const travelHrs=Math.round((1+rnd()*(maxTravel-0.5))*10)/10;
+   itinerary.push({day:d,title,acts,travelHrs:Math.min(travelHrs,maxTravel)});
+ }
+ const hotels=[0,1,2].map(i=>{
+   const base=Math.round((budget/days*0.28*(0.75+rnd()*0.5))/50)*50;
+   return{
+    name:pick(HOTEL_NAMES).replace('{d}',dest),
+    addr:Math.ceil(rnd()*99)+' '+pick(STREETS)+', '+dest+' '+(110001+Math.floor(rnd()*900)),
+    priceLo:base, priceHi:Math.round(base*(1.15+rnd()*0.25)/50)*50,
+    rating:(3.9+rnd()*1.05).toFixed(1),
+    tag:pick(["Free breakfast","Pool access","Near city center","Highly rated","Family friendly"]),
+    dist:(0.4+rnd()*3.2).toFixed(1),
+    amen:[pick(["Free WiFi","AC rooms"]),pick(["Parking","Room service"]),pick(["Pool","Rooftop cafe","Gym"])]
+   };
+ });
+ currentTrip={dest,days,trav,budget,maxTravel,interests,people,itinerary,hotels,isRealDest:!!realPool,
+   cat:{Accommodation:100,Food:100,Transport:100,Activities:100}};
+ await runGenSteps();
+ renderResults(); showView('results');
+ showToast(regen?'Trip regenerated ✓':'Trip generated successfully ✓');
+}
+
+function renderResults(){
+ const t=currentTrip;
+ document.getElementById('res-title').textContent=t.dest+' · '+t.days+'-day plan';
+ document.getElementById('res-pills').innerHTML=
+  `<span class="chip" style="cursor:default">📅 ${t.days} Day(s)</span>
+   <span class="chip" style="cursor:default">💰 ${budgetTier(t.budget,t.days)}</span>
+   <span class="chip" style="display:flex;align-items:center;gap:.4rem;cursor:default">👥 ${t.trav} traveler(s)
+     <button onclick="adjustTravelers(-1)" class="px-1" style="opacity:.7">−</button>
+     <button onclick="adjustTravelers(1)" class="px-1" style="opacity:.7">+</button>
+   </span>`;
+ const note=document.getElementById('data-note');
+ if(t.isRealDest){
+   note.textContent='✓ Places to Visit below are real, verified attractions in '+t.dest+'. Ticket prices are approximate';
+   note.style.background='#1f3a2a'; note.style.color='#b7e6c4';
+ }else{
+   note.textContent="⚠ We don't have curated real-place data for "+t.dest+" yet, so activities below are realistic estimates, not verified named attractions.";
+   note.style.background='#4a3a1f'; note.style.color='#f0d9a8';
+ }
+ renderGettingAround();
+ // hotels — hero photo tile up top
+ document.getElementById('hotel-list').innerHTML=t.hotels.map((h,hi)=>`
+  <div class="card overflow-hidden stagger" style="animation-delay:${hi*70}ms">
+    <div id="hotel-tile-${hi}" class="h-28 flex items-center justify-center text-3xl" style="background:linear-gradient(135deg,${TILE_H[hi%TILE_H.length][0]},${TILE_H[hi%TILE_H.length][1]})">🏨</div>
+    <div class="p-3">
+      <div class="text-sm font-medium">${h.name}</div>
+      <a class="maplink block mt-0.5" href="${mapsUrl(h.name+', '+t.dest)}" target="_blank" rel="noopener">📍 ${h.addr} ↗</a>
+      <div class="text-xs mt-1">💰 ₹${h.priceLo.toLocaleString('en-IN')} – ₹${h.priceHi.toLocaleString('en-IN')} per night</div>
+      <div class="text-xs opacity-70">★ ${h.rating} · ${h.tag}</div>
+      <div class="flex gap-1 flex-wrap mt-1.5">${h.amen.map(a=>`<span class="amenity">${a}</span>`).join('')}</div>
+      <a href="${bookingUrl(h.name,t.dest)}" target="_blank" rel="noopener" class="chip block text-center mt-2" style="background:var(--amber);border-color:var(--amber);color:#1a1204">Book now ↗</a>
+    </div>
+  </div>`).join('');
+ // weather
+ renderWeather();
+ // itinerary — grouped by day, time blocks in a 2-col grid
+ document.getElementById('itinerary-days').innerHTML=t.itinerary.map((day,di)=>`
+  <div class="stagger" style="animation-delay:${di*70}ms">
+    <div class="flex items-center justify-between mb-3">
+      <h4 class="font-semibold text-sm" style="color:var(--amber)">Day ${day.day}: ${day.title}</h4>
+      <span class="text-xs opacity-60">~${day.travelHrs}h travel between stops</span>
+    </div>
+    <div class="grid sm:grid-cols-2 gap-4">
+    ${day.acts.map((a,i)=>`
+      <div>
+        <div class="text-xs font-medium opacity-70 mb-1">${a.slot} (${a.time[0]} – ${a.time[1]})</div>
+        <div class="act-card card p-3 flex gap-3" onclick="openDetail(${day.day-1},${i})">
+          <div id="act-tile-${day.day-1}-${i}" class="tile" style="width:52px;height:52px;font-size:1.3rem;background:linear-gradient(135deg,${TILE[a.cat][0]},${TILE[a.cat][1]})">${a.icon}</div>
+          <div class="flex-1 min-w-0">
+            <div class="flex justify-between gap-2">
+              <span class="text-sm font-medium" style="color:var(--sage)">${a.text}</span>
+              <button onclick="event.stopPropagation();swapAct(${day.day-1},${i})" class="text-xs opacity-50 hover:opacity-100 whitespace-nowrap">↻</button>
+            </div>
+            <div class="text-xs opacity-70 mt-1">🎟️ Ticket: ${a.ticket}</div>
+            <a class="maplink" href="${mapsUrl(a.text+', '+t.dest)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">View on Google Maps ↗</a>
+          </div>
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>`).join('');
+ renderBudget();
+ enhanceWithLiveData();
+}
+function swapAct(dayIdx,actIdx){
+ const day=currentTrip.itinerary[dayIdx]; const a=day.acts[actIdx];
+ seed=Date.now()%100000;
+ const realPool=REAL_PLACES[realKey(currentTrip.dest)];
+ if(realPool){
+   const usedNow=new Set(currentTrip.itinerary.flatMap(d=>d.acts.map(x=>x.text)).filter(n=>n!==a.text));
+   let opts=realPool.filter(p=>!usedNow.has(p.name)&&p.name!==a.text);
+   if(!opts.length)opts=realPool.filter(p=>p.name!==a.text);
+   const p=pick(opts.length?opts:realPool);
+   a.text=p.name; a.cat=p.cat; a.icon=ICON[p.cat]; a.ticket=p.ticket; a.realDesc=p.desc; a.isReal=true;
+ }else{
+   a.text=pick(POOL[a.cat]).replace('{d}',currentTrip.dest); a.ticket=pick(TICKET[a.cat]);
+ }
+ renderResults();
+}
+
+/* place detail modal */
+function openDetail(dayIdx,actIdx){
+ const day=currentTrip.itinerary[dayIdx]; const a=day.acts[actIdx];
+ const cost=Math.round((currentTrip.budget/(currentTrip.days*2.4))*(0.7+rnd()*0.6)/10)*10;
+ const tile=document.getElementById('detail-tile');
+ tile.style.background=`linear-gradient(135deg,${TILE[a.cat][0]},${TILE[a.cat][1]})`; tile.textContent=a.icon;
+ document.getElementById('detail-body').innerHTML=`
+   <h3 class="serif text-xl mb-1">${a.text} ${a.isReal?'<span class="text-xs" style="color:#4caf7d">✓ verified real place</span>':''}</h3>
+   <div class="text-xs opacity-60 mb-3">Day ${day.day} · ${a.slot} · ${currentTrip.dest}</div>
+   <p class="text-sm mb-4">${a.realDesc||DESC[a.cat]}</p>
+   <div class="grid grid-cols-2 gap-3 text-sm mb-4">
+     <div><div class="text-xs opacity-60">Rating</div><div>★ ${a.rating} / 5${a.isReal?' (estimated)':''}</div></div>
+     <div><div class="text-xs opacity-60">Typical hours</div><div>${HOURS[a.cat]}${a.isReal?' (approx.)':''}</div></div>
+     <div><div class="text-xs opacity-60">Suggested duration</div><div>${a.dur}</div></div>
+     <div><div class="text-xs opacity-60">Est. cost / person</div><div>₹${cost.toLocaleString('en-IN')}</div></div>
+   </div>
+   <div class="text-sm mb-2">🎟️ Ticket: ${a.ticket}${a.isReal?' (approx.)':''}</div>
+   <div class="text-xs opacity-60 mb-4">${a.isReal?'A real, named attraction in '+currentTrip.dest+'.':'Matched to your interest in <b>'+a.cat+'</b> (generic estimate — not a verified real place).'}</div>
+   <div class="flex gap-2 flex-wrap">
+     <a href="${mapsUrl(a.text+', '+currentTrip.dest)}" target="_blank" rel="noopener" class="chip" style="background:var(--amber);border-color:var(--amber);color:#1a1204">Open in Google Maps ↗</a>
+     <button onclick="swapAct(${dayIdx},${actIdx});openDetail(${dayIdx},${actIdx})" class="chip">↻ Swap this stop</button>
+   </div>`;
+ document.getElementById('detail-overlay').classList.add('open');
+}
+function closeDetail(){document.getElementById('detail-overlay').classList.remove('open')}
+function openMailto(url){
+ // target="_blank" escapes this preview's sandboxed frame (same trick the
+ // Maps/Booking links use) — navigating mailto: in-frame gets CSP-blocked.
+ const a=document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener'; a.style.display='none';
+ document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+function sendContact(){
+ const name=document.getElementById('c-name').value.trim();
+ const email=document.getElementById('c-email').value.trim();
+ const msg=document.getElementById('c-msg').value.trim();
+ let ok=true;
+ markFieldErr('c-name',!name); if(!name)ok=false;
+ markFieldErr('c-email',!EMAIL_RE.test(email)); if(!EMAIL_RE.test(email))ok=false;
+ markFieldErr('c-msg',!msg); if(!msg)ok=false;
+ if(!ok){showToast('Please fix the highlighted field(s).','error');return}
+ openMailto(`mailto:support@aitripplanner.app?subject=${encodeURIComponent('Message from '+name)}&body=${encodeURIComponent(msg+'\n\nReply to: '+email)}`);
+ showToast('Opening your mail app to send this ✓');
+}
+function openHow(){document.getElementById('how-overlay').classList.add('open')}
+function closeHow(){document.getElementById('how-overlay').classList.remove('open')}
+
+/* step-by-step "building your itinerary" sequence */
+const GEN_STEPS=[
+ ['Validate inputs','Checking required fields, ranges and consistency'],
+ ['Orchestrate tasks',"Converting your goal into planning tasks"],
+ ['Retrieve data','Places · Routes · Weather'],
+ ['Generate itinerary','Drafting a structured candidate plan'],
+ ['Verify constraints','Checking budget, duration and travel time'],
+ ['Finalize plan','Re-planning affected days if needed']
+];
+function buildGenSteps(){
+ document.getElementById('gen-steps').innerHTML=GEN_STEPS.map((s,i)=>`
+  <div class="gen-step pending flex gap-3 items-start mb-4" id="gen-step-${i}">
+    <div class="circle" id="gen-circle-${i}">${i+1}</div>
+    <div class="pt-1"><div class="font-semibold text-sm">${s[0]}</div><div class="text-xs opacity-60">${s[1]}</div></div>
+  </div>`).join('');
+}
+function wait(ms){return new Promise(r=>setTimeout(r,ms))}
+async function runGenSteps(){
+ buildGenSteps();
+ document.getElementById('gen-overlay').classList.add('open');
+ for(let i=0;i<GEN_STEPS.length;i++){
+   const el=document.getElementById('gen-step-'+i);
+   el.classList.remove('pending'); el.classList.add('active');
+   await wait(430);
+   el.classList.remove('active'); el.classList.add('done');
+   document.getElementById('gen-circle-'+i).textContent='✓';
+ }
+ await wait(280);
+ document.getElementById('gen-overlay').classList.remove('open');
+}
+
+/* weather */
+let wxRows=[];
+function renderWeather(){
+ seed=[...currentTrip.dest].reduce((a,c)=>a+c.charCodeAt(0),0)+Date.now()%97;
+ wxRows=[]; const today=new Date();
+ for(let i=0;i<currentTrip.days;i++){
+   const dt=new Date(today.getTime()+i*86400000);
+   wxRows.push({day:i+1,label:dt.toLocaleDateString('en-IN',{weekday:'short'}),icon:pick(WX_ICON),lo:18+Math.round(rnd()*8),hi:27+Math.round(rnd()*8)});
+ }
+ document.getElementById('wx-strip').innerHTML=wxRows.map(r=>`
+  <div class="card p-2 text-center"><div class="text-xs opacity-60">${r.label}</div>
+  <div class="text-xl my-1">${r.icon}</div><div class="text-xs">${r.hi}°/${r.lo}°</div></div>`).join('');
+ document.getElementById('wx-time').textContent='updated '+today.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+ const bad=wxRows.filter(r=>r.icon==='🌧️'||r.icon==='🌦️');
+ const alert=document.getElementById('wx-alert');
+ if(bad.length){
+   alert.classList.remove('hide'); alert.style.background='#4a2a1f'; alert.style.color='#ffcf9e';
+   alert.innerHTML=`⚠ Rain expected on Day ${bad.map(b=>b.day).join(', ')} — outdoor stops on ${bad.length>1?'those days':'that day'} may be affected.
+     <button onclick="regenRainyDays()" class="chip ml-1" style="padding:.15rem .6rem">↻ Re-plan affected day(s)</button>
+     <button onclick="emailWeatherAlert()" class="chip ml-1" style="padding:.15rem .6rem">✉ Email me this alert</button>`;
+   if(!currentTrip.wxNotified){currentTrip.wxNotified=true; showToast('Weather issue detected — alert ready to email ✉');}
+ } else alert.classList.add('hide');
+}
+function refreshWeather(){renderWeather(); showToast('Weather refreshed')}
+function emailNotify(subject,body){
+ if(!user){showToast('Sign in to email notifications','error');return}
+ openMailto(`mailto:${user.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+ showToast('Opening your mail app to send this to '+user.email);
+}
+function emailWeatherAlert(){
+ const bad=wxRows.filter(r=>r.icon==='🌧️'||r.icon==='🌦️');
+ const body=`Weather alert for your ${currentTrip.dest} trip\n\n`+
+  bad.map(b=>`Day ${b.day} (${b.label}): ${b.icon} — expect ${b.hi}°/${b.lo}°, possible rain.`).join('\n')+
+  `\n\nOutdoor stops on ${bad.length>1?'these days':'this day'} may need to be swapped — open AI Trip Planner and use "Re-plan affected day(s)".`;
+ emailNotify('Weather alert — your '+currentTrip.dest+' trip',body);
+}
+function regenRainyDays(){
+ const bad=wxRows.filter(r=>r.icon==='🌧️'||r.icon==='🌦️').map(r=>r.day);
+ const realPool=REAL_PLACES[realKey(currentTrip.dest)];
+ bad.forEach(dnum=>{const day=currentTrip.itinerary[dnum-1]; if(!day)return;
+   day.acts.forEach(a=>{if(a.cat==='Nature'||a.cat==='Adventure'){
+     if(realPool){
+       const indoor=realPool.filter(p=>p.cat==='Culture & Heritage'||p.cat==='Food'||p.cat==='Shopping');
+       const p=pick(indoor.length?indoor:realPool);
+       a.cat=p.cat; a.icon=ICON[p.cat]; a.text=p.name; a.ticket=p.ticket; a.realDesc=p.desc; a.isReal=true;
+     }else{
+       const alt=['Culture & Heritage','Food','Shopping','Relaxation'].find(c=>currentTrip.interests.includes(c))||'Culture & Heritage';
+       a.cat=alt; a.icon=ICON[alt]; a.text=pick(POOL[alt]).replace('{d}',currentTrip.dest); a.ticket=pick(TICKET[alt]);
+     }
+   }});
+ });
+ renderResults(); showToast('Re-planned around the forecast ✓');
+}
+function adjustTravelers(delta){
+ const t=currentTrip; t.trav=Math.max(1,t.trav+delta);
+ renderResults(); showToast('Updated for '+t.trav+' traveler(s) — costs recalculated');
+}
+
+/* budget — deterministic category costs, sliders act as ±50% adjustment, contingency auto-fills the rest */
+function baseCosts(t){
+ const avgHotel=t.hotels.reduce((a,h)=>a+h.priceLo,0)/t.hotels.length;
+ return{
+  Accommodation:avgHotel*t.days,
+  Food:550*t.trav*t.days,
+  Transport:350*t.trav*t.days,
+  Activities:280*t.trav*t.days*1.5
+ };
+}
+function renderBudget(){
+ const t=currentTrip;
+ document.getElementById('budget-rows').innerHTML=Object.keys(t.cat).map(k=>`
+  <div>
+   <div class="flex justify-between text-xs mb-1"><span>${k}</span><span id="bv-${k}">₹0</span></div>
+   <input type="range" min="50" max="150" value="${t.cat[k]}" oninput="setSplit('${k}',this.value)">
+  </div>`).join('')+`<div id="bv-Contingency-row"><div class="flex justify-between text-xs mb-1"><span>Contingency (10%)</span><span id="bv-Contingency">₹0</span></div><div class="bar"><i style="width:100%;opacity:.5"></i></div></div>`;
+ recalcBudget();
+}
+function setSplit(k,v){currentTrip.cat[k]=+v; recalcBudget()}
+function recalcBudget(){
+ const t=currentTrip; const base=baseCosts(t); let subtotal=0;
+ Object.keys(t.cat).forEach(k=>{
+   const amt=Math.round(base[k]*t.cat[k]/100/10)*10; subtotal+=amt;
+   const el=document.getElementById('bv-'+k); if(el)el.textContent='₹'+amt.toLocaleString('en-IN');
+ });
+ const cont=Math.round(subtotal*0.1/10)*10; const total=subtotal+cont;
+ const ce=document.getElementById('bv-Contingency'); if(ce)ce.textContent='₹'+cont.toLocaleString('en-IN');
+ document.getElementById('budget-total').textContent='₹'+total.toLocaleString('en-IN');
+ const flag=document.getElementById('budget-flag');
+ const over=total>t.budget*1.03;
+ flag.innerHTML=over
+  ?`⚠ ₹${(total-t.budget).toLocaleString('en-IN')} above your stated budget of ₹${t.budget.toLocaleString('en-IN')}. <button onclick="autoFitBudget()" class="chip ml-1" style="padding:.1rem .5rem">Auto-fit to budget</button>`
+  :'✓ Within your stated budget of ₹'+t.budget.toLocaleString('en-IN')+'.';
+ flag.style.background=over?'#4a2a1f':'#1f3a2a'; flag.style.color=over?'#ffcf9e':'#b7e6c4';
+}
+function autoFitBudget(){
+ const t=currentTrip; const base=baseCosts(t);
+ let subtotal=Object.keys(t.cat).reduce((a,k)=>a+base[k]*t.cat[k]/100,0);
+ let total=subtotal*1.1;
+ if(total<=t.budget){showToast('Already within budget');return}
+ const target=t.budget/1.1;
+ const factor=target/subtotal;
+ Object.keys(t.cat).forEach(k=>{ if(k!=='Accommodation') t.cat[k]=Math.max(50,Math.round(t.cat[k]*factor)); });
+ renderBudget(); showToast('Adjusted activities, food and transport to fit your budget ✓');
+}
+
+/* pdf + email */
+function tripText(){
+ const t=currentTrip; let s=`AI Trip Planner — ${t.dest} (${t.days} days, ${t.trav} traveler${t.trav>1?'s':''})\nBudget: Rs ${t.budget}\n\n`;
+ t.itinerary.forEach(d=>{s+=`Day ${d.day} (~${d.travelHrs}h travel):\n`; d.acts.forEach(a=>s+=`  - ${a.text}\n`); s+='\n';});
+ s+='Estimated total: '+document.getElementById('budget-total').textContent;
+ return s;
+}
+function downloadPDF(){
+ const {jsPDF}=window.jspdf; const doc=new jsPDF();
+ const t=currentTrip; let y=18;
+ doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text('AI Trip Planner — '+t.dest+' Itinerary',14,y); y+=8;
+ doc.setFontSize(10); doc.setFont('helvetica','normal');
+ doc.text(`${t.days} days · ${t.trav} traveler(s) · Budget Rs ${t.budget.toLocaleString('en-IN')}`,14,y); y+=8;
+ t.itinerary.forEach(d=>{
+   if(y>270){doc.addPage();y=18;}
+   doc.setFont('helvetica','bold'); doc.text(`Day ${d.day} — ~${d.travelHrs}h travel`,14,y); y+=6;
+   doc.setFont('helvetica','normal');
+   d.acts.forEach(a=>{doc.text('• '+a.text,18,y); y+=6;});
+   y+=3;
+ });
+ if(y>260){doc.addPage();y=18;}
+ doc.setFont('helvetica','bold'); doc.text('Estimated total: '+document.getElementById('budget-total').textContent,14,y);
+ const fname='ai-trip-planner-'+currentTrip.dest.replace(/\s+/g,'-').toLowerCase()+'.pdf';
+ doc.save(fname);
+ showToast('PDF downloaded ✓ — opening email to send it to '+(user?user.email:'you'));
+ setTimeout(()=>emailTrip(fname),700);
+}
+function emailTrip(pdfName){
+ const subj=encodeURIComponent('Your '+currentTrip.dest+' itinerary — AI Trip Planner');
+ let body=tripText();
+ if(pdfName)body+=`\n\n(A copy was just downloaded as "${pdfName}" — attach it from your downloads before sending, since email links can't attach files automatically.)`;
+ openMailto(`mailto:${user?user.email:''}?subject=${subj}&body=${encodeURIComponent(body)}`);
+}
+
+/* save / list trips */
+function myTrips(){try{return JSON.parse(localStorage.getItem('vy_trips_'+user.email)||'[]')}catch(e){return[]}}
+function saveTrip(){
+ const list=myTrips(); list.unshift({...currentTrip,savedAt:new Date().toISOString()});
+ try{localStorage.setItem('vy_trips_'+user.email,JSON.stringify(list.slice(0,20)))}catch(e){}
+ alert('Trip saved to “My trips”.');
+}
+function renderTrips(){
+ const list=myTrips();
+ document.getElementById('trips-list').innerHTML=list.length?list.map((t,i)=>`
+  <div class="card p-4 flex items-center justify-between">
+    <div><div class="font-medium">${t.dest} · ${t.days} days</div>
+    <div class="text-xs opacity-60">Saved ${new Date(t.savedAt).toLocaleDateString()} · ₹${t.budget.toLocaleString('en-IN')}</div></div>
+    <button class="chip" onclick='reopenTrip(${i})'>Open</button>
+  </div>`).join(''):'<p class="text-sm opacity-60">No saved trips yet — plan one and hit “Save trip”.</p>';
+}
+function reopenTrip(i){currentTrip=myTrips()[i]; renderResults(); showView('results');}
+</script>
+</body>
+</html>

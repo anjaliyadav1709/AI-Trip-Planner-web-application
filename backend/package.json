@@ -1,0 +1,20 @@
+{
+  "name": "ai-trip-planner-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Free real-data backend for AI Trip Planner — OpenStreetMap places, Open-Meteo weather, Nodemailer email",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "nodemailer": "^6.9.14"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
